@@ -1,0 +1,109 @@
+---
+title: "Connect Your AI Agent to JIRA"
+sidebarTitle: "JIRA Integration"
+description: "Set up your AI coding agent to read JIRA issues, transition ticket status, and post comments using MCP servers or native IDE integrations."
+---
+
+Connecting your AI coding agent to JIRA means the agent can read acceptance criteria directly from a ticket, update the ticket's status as work progresses, and post comments — all without you switching context away from the IDE. This guide covers both Atlassian Cloud teams using Rovo MCP and self-hosted or Data Center teams using the JIRA REST API.
+
+## Two Integration Approaches
+
+<Tabs>
+  <Tab title="Atlassian Rovo MCP (Cloud)">
+    The Atlassian Rovo MCP server is the fastest path for Cloud teams. It exposes JIRA (and Confluence) to any MCP-compatible agent over a single authenticated HTTP connection. No local server process is required.
+  </Tab>
+  <Tab title="JIRA REST API (Data Center / Self-hosted)">
+    For self-hosted JIRA (Data Center or Server), you authenticate directly against the JIRA REST API using a personal API token. Most AI tools — Tabnine, Continue.dev, JIRA GitLab Helper — accept a server URL and token pair.
+  </Tab>
+</Tabs>
+
+## JIRA Cloud via Rovo MCP
+
+<Steps>
+  <Step title="Authorize the Rovo MCP server">
+    Visit [https://mcp.atlassian.com](https://mcp.atlassian.com) and sign in with your Atlassian account. Grant the MCP server access to your JIRA Cloud site. You will receive an authenticated server URL to use in your IDE config.
+  </Step>
+  <Step title="Add the server to your IDE config">
+    Add the Rovo MCP server to your IDE's MCP configuration file. The exact file path varies by IDE (see the [IDE Setup guide](/guides/ide-setup)), but the server entry looks the same everywhere:
+
+    ```json
+    {
+      "servers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        }
+      }
+    }
+    ```
+  </Step>
+  <Step title="Verify the connection in your agent">
+    Open the AI chat panel in your IDE and ask:
+
+    ```
+    "What are the acceptance criteria for PROJ-123?"
+    ```
+
+    If the agent returns the ticket description and acceptance criteria, the MCP connection is live.
+  </Step>
+</Steps>
+
+## JIRA Data Center / Self-Hosted
+
+<Steps>
+  <Step title="Generate a JIRA API token">
+    Log in to your self-hosted JIRA instance and navigate to **Account Settings → Security → API tokens**. Click **Create API token**, give it a descriptive name (e.g. `ai-agent-local`), and copy the token value. Store it in a password manager — you will not be able to view it again.
+  </Step>
+  <Step title="Test the connection">
+    Verify that your credentials work against the JIRA REST API before configuring any tool:
+
+    ```bash
+    curl -u your.email@company.com:YOUR_API_TOKEN \
+      https://jira.yourcompany.com/rest/api/2/issue/PROJ-123
+    ```
+
+    A successful response returns the full issue JSON. If you receive a `401 Unauthorized`, double-check your token and that the user has permission to view the project.
+  </Step>
+  <Step title="Configure your AI tool">
+    Enter your JIRA server URL and API token in the settings panel of your tool (Tabnine, JIRA GitLab Helper, Continue.dev, or similar). Use these values:
+
+    - **Server URL**: `https://jira.yourcompany.com`
+    - **Username**: your JIRA account email
+    - **API Token**: the token you generated above
+  </Step>
+</Steps>
+
+## Useful Agent Prompts
+
+Once your agent is connected to JIRA, you can drive the full ticket lifecycle through natural language. Here are the most useful prompts to get started:
+
+- `"List all open issues in the PROJ sprint"`
+- `"Transition PROJ-123 to In Progress"`
+- `"Post a comment on PROJ-123: implementation complete, awaiting review"`
+- `"Generate subtasks for PROJ-456 based on the description"`
+
+You can chain these prompts with code generation tasks — for example, asking the agent to read the acceptance criteria for PROJ-123 and then scaffold the implementation in a single conversation turn.
+
+## Linking Commits to JIRA
+
+Always include the JIRA issue key in your commit messages and MR titles. This is what enables automated ticket transitions in CI/CD (see the [Git & CI/CD guide](/guides/git-cicd)) and gives reviewers immediate traceability between code changes and requirements.
+
+```bash
+git commit -m "PROJ-123: implement user authentication endpoint"
+```
+
+Use the same key as the prefix in your MR title:
+
+```
+PROJ-123: Implement user authentication endpoint
+```
+
+<Tip>
+  GitLab and Gitea both support **Smart Commits** syntax, which lets you transition a JIRA issue directly from the commit message. Add `#done` after the issue key to move the ticket to its Done transition:
+
+  ```
+  PROJ-123 #done Implemented and tested the auth endpoint
+  ```
+
+  Your JIRA administrator can configure which transition ID maps to `#done` in the JIRA–Git integration settings.
+</Tip>

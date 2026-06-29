@@ -1,0 +1,153 @@
+---
+title: "The AI Dev Lifecycle: From JIRA to Production"
+sidebarTitle: "Workflow Overview"
+description: "A step-by-step walkthrough of the AI-powered development lifecycle connecting JIRA, Confluence, LLM coding agents, self-hosted Git, and CI/CD automation."
+---
+
+This page walks through the complete AI-powered development lifecycle used at KN Group, from the moment a JIRA ticket is created to the moment it is automatically closed after a successful production deployment. Each stage has a defined set of inputs, outputs, and recommended tools — so you can adopt individual stages incrementally or wire the full pipeline end to end.
+
+<Steps>
+  <Step title="JIRA Issue Creation">
+    The lifecycle begins when a product manager, tech lead, or automated process creates a JIRA ticket. For AI agents to work effectively, every ticket should include:
+
+    - A clear **summary** that names the feature, fix, or task in one line
+    - **Acceptance criteria** written as testable conditions ("Given / When / Then" or a bulleted list)
+    - **Story point estimate** to help the agent gauge implementation scope
+    - **Labels or components** that link the ticket to a codebase area or team
+    - **Confluence page links** in the ticket description pointing to relevant design docs or ADRs
+
+    Tickets that omit acceptance criteria are the single most common cause of low-quality AI-generated code. Treat ticket quality as a first-class engineering concern.
+  </Step>
+  <Step title="Confluence Context Retrieval">
+    Before the AI agent writes a single line of code, it retrieves the context documents linked to the ticket. This step prevents the agent from making architectural decisions that conflict with choices already documented by the team.
+
+    The agent should look for:
+
+    - **Architecture Decision Records (ADRs)** — What technology choices have already been locked in and why
+    - **API specifications** — OpenAPI or AsyncAPI docs describing the interfaces the implementation must conform to
+    - **Runbooks** — Operational constraints such as deployment windows, feature flag conventions, and rollback procedures
+    - **Prior ticket resolutions** — Closed tickets in the same component that show established patterns
+
+    MCP-enabled agents retrieve these documents automatically using the Confluence MCP server. Without MCP, you need to paste content manually into the agent's context window — which is slow and error-prone.
+  </Step>
+  <Step title="AI Agent Picks Up the Task">
+    With the JIRA ticket and Confluence docs loaded as context, the AI agent begins planning the implementation. In practice this means:
+
+    1. The developer opens the ticket in the IDE sidebar (via Atlassian Rovo, JetBrains AI Assistant, or a Cursor rule) or pastes the ticket key into the agent chat.
+    2. The MCP client in the IDE calls the JIRA MCP server to fetch full ticket details and the Confluence MCP server to retrieve linked pages.
+    3. The agent produces an **implementation plan** — typically a short numbered list of files to create or modify — and presents it to the developer for approval before writing code.
+    4. The developer reviews the plan, requests adjustments if needed, and approves.
+
+    Never skip the plan-review step. An agent that writes 500 lines of code in the wrong direction costs more time to fix than the time saved by skipping approval.
+  </Step>
+  <Step title="Code Generation">
+    After plan approval, the agent generates the implementation inside the IDE. The developer stays in the loop by reviewing diffs as they appear in the editor.
+
+    Key practices during this stage:
+
+    - Keep the agent focused on **one acceptance criterion at a time** rather than generating the entire feature in a single pass
+    - Use the IDE's inline diff view to review every change before accepting it
+    - Ask the agent to write **unit tests alongside the implementation**, not after
+    - If the agent produces code that contradicts an ADR, paste the relevant Confluence section back into the chat and ask it to revise
+
+    Supported IDEs and agents are documented in the [Tool Comparison](/reference/tool-comparison) reference. IntelliJ IDEA users should use the JetBrains AI Assistant or the Claude plugin. VS Code and Cursor users should configure MCP servers in the IDE settings as described on the [MCP Protocol](/mcp-protocol) page.
+  </Step>
+  <Step title="Git MR Creation">
+    Once the implementation passes local tests, the agent (or the developer) creates a Merge Request. Follow these conventions to enable downstream automation:
+
+    - **Branch name**: `{JIRA_KEY}-short-description` — for example, `PROJ-42-add-oauth-callback`
+    - **Commit message**: Begin every commit with the JIRA key: `PROJ-42: Add OAuth callback endpoint`
+    - **MR title**: Mirror the JIRA ticket summary prefixed with the key: `PROJ-42: Add OAuth callback endpoint`
+    - **MR description**: Include the JIRA ticket URL, a summary of changes, and a link to the Confluence design doc
+
+    These conventions allow the CI/CD pipeline to parse the JIRA key from Git metadata and update the ticket automatically. Agents that support Git tool use (Claude Code, Cursor, OpenHands) can create the branch and open the MR autonomously if given the appropriate permissions.
+  </Step>
+  <Step title="CI/CD Pipeline">
+    The CI/CD pipeline runs on every push to a feature branch and again on merge. A complete pipeline for AI-generated code should include:
+
+    - **Unit and integration tests** — Catch regressions introduced by generated code
+    - **Static analysis and linting** — Enforce code style consistently regardless of whether a human or agent wrote the code
+    - **Dependency vulnerability scan** — AI agents sometimes import packages with known CVEs
+    - **SAST (Static Application Security Testing)** — Especially important for agent-generated auth, crypto, and SQL code
+    - **Deployment to staging** — Run smoke tests against a real environment before promoting to production
+    - **JIRA transition on merge** — A post-merge pipeline step calls `POST /rest/api/3/issue/{issueKey}/transitions` to move the ticket to **Done**
+
+    See the [End-to-End Workflow Guide](/guides/end-to-end-workflow) for example CI pipeline configuration files.
+  </Step>
+  <Step title="Closed Loop">
+    After a successful production deployment, the pipeline closes the loop:
+
+    1. The JIRA ticket transitions to **Done** via the REST API
+    2. A comment is posted to the ticket with the deployment timestamp, pipeline run URL, and Git commit SHA
+    3. Linked Confluence pages can be updated automatically to reflect the new system state (optional, requires write-scope MCP access)
+    4. Stakeholders subscribed to the JIRA ticket receive a notification through their preferred channel (email, Slack, Teams)
+
+    The developer's only required action is the code review in step 4. Every other status update, notification, and audit trail entry is generated automatically.
+  </Step>
+</Steps>
+
+## Tool Selection by Stage
+
+Use the tabs below to see which tools are recommended at each stage of the lifecycle.
+
+<Tabs>
+  <Tab title="JIRA & Confluence">
+    | Tool | Role | Hosting |
+    |---|---|---|
+    | Atlassian JIRA Cloud | Issue tracking source of truth | Cloud (Atlassian) |
+    | Atlassian Confluence Cloud | Context document store | Cloud (Atlassian) |
+    | Atlassian Rovo | AI agent with native JIRA + Confluence access | Cloud (Atlassian) |
+    | `sooperset/mcp-atlassian` | Open-source MCP server for JIRA + Confluence | Self-hosted |
+    | `mark3labs/mcp-atlassian` | Lightweight Go-based Atlassian MCP server | Self-hosted |
+
+    Atlassian Rovo is the recommended choice for teams already on Atlassian Cloud because it requires no additional infrastructure. Self-hosted teams should use one of the open-source MCP server options.
+  </Tab>
+  <Tab title="IDE & LLM">
+    | Tool | IDE | MCP Support |
+    |---|---|---|
+    | Claude Code (Anthropic) | VS Code, terminal | Native |
+    | Cursor | Cursor IDE (VS Code fork) | Native |
+    | GitHub Copilot | VS Code, JetBrains, Neovim | Via extensions |
+    | JetBrains AI Assistant | IntelliJ IDEA, PyCharm, etc. | Via MCP plugin |
+    | Continue.dev | VS Code, JetBrains | Native |
+
+    For IntelliJ IDEA users, JetBrains AI Assistant with the MCP plugin provides the most integrated experience. VS Code and Cursor users benefit from native MCP client support and a large ecosystem of community MCP servers.
+  </Tab>
+  <Tab title="Git & MR">
+    | Tool | Notes |
+    |---|---|
+    | GitLab CE (self-hosted) | Full MR workflow; CI/CD included; JIRA integration via webhooks |
+    | Gitea | Lightweight self-hosted Git; use Gitea Actions for CI |
+    | Forgejo | Gitea fork with strong community support; compatible with Gitea MCP server |
+    | GitHub (cloud) | Best ecosystem for AI tool integrations; requires cloud access |
+    | `gitea/gitea-mcp` | Official MCP server for Gitea and Forgejo |
+
+    For fully self-hosted environments, GitLab CE or Forgejo are the recommended choices. Both support webhook-based JIRA transitions out of the box.
+  </Tab>
+  <Tab title="CI/CD">
+    | Tool | Notes |
+    |---|---|
+    | GitLab CI | Native to GitLab CE; YAML pipeline definitions; strong JIRA integration |
+    | Gitea Actions | GitHub Actions-compatible syntax; works with Forgejo and Gitea |
+    | Jenkins | Mature self-hosted option; use the JIRA plugin for ticket transitions |
+    | GitHub Actions | Best-in-class ecosystem; requires GitHub cloud or GitHub Enterprise |
+
+    Regardless of which CI tool you use, the JIRA transition step is the same: a `curl` call to the JIRA REST API in a post-merge pipeline stage. See the [End-to-End Workflow Guide](/guides/end-to-end-workflow) for a reusable script.
+  </Tab>
+</Tabs>
+
+## Self-Hosted Git Considerations
+
+Running a self-hosted Git server (Gitea, Forgejo, or GitLab CE) introduces a few constraints that are worth planning for before you integrate AI tools.
+
+**MCP server reachability** — Your IDE's MCP client needs network access to the MCP server process. If the MCP server runs alongside your Git instance on a private network, developers working remotely need a VPN or a reverse proxy with TLS termination to reach it.
+
+**Webhook delivery** — JIRA-to-Git and Git-to-JIRA webhook calls must traverse your network boundary. Ensure that your JIRA Cloud instance can reach your self-hosted Git server's webhook endpoint, or use a lightweight relay service like `smee.io` for local development.
+
+**Agent Git credentials** — AI agents that create branches and open MRs need Git credentials. Issue a dedicated service account with a scoped access token rather than sharing a developer's personal token. Rotate the token on a 90-day cycle.
+
+**Large diffs and context limits** — Self-hosted repositories sometimes contain binary assets or generated files that inflate diff sizes beyond LLM context limits. Configure a `.gitignore` and a `.cursorignore` (or equivalent) to exclude generated files from the agent's view.
+
+<Tip>
+  Always include the JIRA issue key in your branch name, every commit message, and the MR title. Most CI/CD JIRA integrations parse the key using a simple regex such as `[A-Z]+-\d+`. A consistent naming convention means you never have to configure the pipeline differently per project — and your JIRA tickets update automatically without any extra steps.
+</Tip>

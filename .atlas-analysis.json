@@ -1,13 +1,11 @@
 {
-  "$schema": "https://mintlify.com/docs.json",
-  "name": "KN Group AI Dev Toolkit",
+  "projectType": "general",
+  "projectName": "KN Group AI Dev Toolkit",
+  "projectDescription": "A curated guide to AI Task Engineering tools that power the JIRA → Confluence → IDE/LLM → Git → CI/CD development lifecycle.",
   "theme": "luma",
-  "colors": {
-    "primary": "#ef7025",
-    "light": "#eec9bc",
-    "dark": "#4fa1ab"
-  },
-  "favicon": "/favicon.svg",
+  "primaryColor": "#ef7025",
+  "lightColor": "#eec9bc",
+  "darkColor": "#4fa1ab",
   "navigation": {
     "tabs": [
       {
@@ -71,10 +69,24 @@
       }
     ]
   },
-  "navbar": {
-    "primary": {
-      "type": "github",
-      "href": "https://github.com/kngroup"
-    }
-  }
+  "keyFeatures": [
+    "Full lifecycle coverage: JIRA issue → Confluence docs → IDE/LLM → Git PR → CI/CD → JIRA close",
+    "MCP (Model Context Protocol) as the universal integration layer",
+    "Support for Claude, Codex, and other LLMs as coding agents",
+    "Native JIRA and Confluence integrations via Atlassian Rovo MCP",
+    "Self-hosted Git and community CI/CD pipeline compatibility",
+    "Multi-agent orchestration for parallel task execution",
+    "Automatic MR/PR → JIRA ticket closure in CI/CD",
+    "Enterprise-grade options with zero data retention"
+  ],
+  "publicApiSurface": [
+    "Atlassian Rovo MCP Server (https://mcp.atlassian.com/v1/mcp)",
+    "GitHub Copilot for Jira integration",
+    "Tabnine Jira Implementation Agent",
+    "task-master-ai MCP server",
+    "Forge Orchestrator CLI (forge run / forge ship)",
+    "Acendas Atlassian Suite (179-tool MCP server)",
+    "jira-claude-code-integration /jira-task commands",
+    "Markplane MCP server + CLI (markplane init)"
+  ]
 }

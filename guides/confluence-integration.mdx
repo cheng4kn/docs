@@ -1,0 +1,71 @@
+---
+title: "Use Confluence Docs as AI Agent Context"
+sidebarTitle: "Confluence Integration"
+description: "Feed ADRs, design docs, and runbooks from Confluence into your AI coding agent so it generates code that matches your team's architecture and conventions."
+---
+
+Your Confluence pages — ADRs, design documents, API specs, runbooks — contain the institutional knowledge your AI agent needs to write code that fits your architecture. Without this context, the agent falls back to generic patterns that may contradict your team's decisions. This guide shows how to connect Confluence to your IDE agent so every code generation task is grounded in your actual documentation.
+
+## Atlassian Rovo MCP (Cloud)
+
+The Rovo MCP server exposes Confluence pages automatically alongside JIRA. Once you have connected the server (see the [JIRA Integration guide](/guides/jira-integration) for setup steps), your agent can query Confluence content with no additional configuration. The agent searches across page titles, body text, and labels, so the quality of your pages directly determines the quality of the context it retrieves.
+
+Once connected, ask your agent questions like:
+
+- `"What does our ADR for the auth service say?"`
+- `"Find the design doc for the payment API"`
+- `"Summarize the runbook for deploying the user service"`
+
+The agent fetches and reads the relevant pages, then uses them as context when generating code or answering architectural questions.
+
+## Confluence REST API (Self-Hosted / Data Center)
+
+For self-hosted Confluence (Data Center), you can retrieve page content directly through the REST API and inject it into your agent's context window.
+
+<Steps>
+  <Step title="Generate a Confluence API token">
+    Log in to your Confluence instance and go to **Account Settings → Security → API tokens**. Create a new token named something like `ai-agent-confluence`. This is typically the same account settings panel as your JIRA token — you can reuse the same token for both services if they share an Atlassian account.
+  </Step>
+  <Step title="Test page retrieval">
+    Fetch a page by its numeric content ID to confirm your credentials work. You can find the content ID in the page URL (e.g. `/pages/12345/`):
+
+    ```bash
+    curl -u your.email@company.com:YOUR_API_TOKEN \
+      "https://confluence.yourcompany.com/rest/api/content/12345?expand=body.storage"
+    ```
+
+    A successful response returns the page metadata and its body in Confluence's storage format (HTML-like XML).
+  </Step>
+  <Step title="Export the page to Markdown">
+    Convert the page body to clean Markdown so it is easy for your LLM to read. This pipeline extracts the HTML body with `jq` and converts it with `pandoc`:
+
+    ```bash
+    curl -u email:token "https://confluence.yourcompany.com/rest/api/content/12345?expand=body.storage" \
+      | jq -r '.body.storage.value' | pandoc -f html -t markdown > context.md
+    ```
+
+    Make sure `jq` and `pandoc` are installed on your machine. Most Linux and macOS developer environments include `jq`; install `pandoc` from [pandoc.org](https://pandoc.org/installing.html) if needed.
+  </Step>
+  <Step title="Inject the context into your agent">
+    Include `context.md` in your agent's system prompt or paste it into the context window before your coding request. For Claude, you can reference the file directly in a prompt:
+
+    ```
+    Read the attached context.md (our auth service ADR), then implement the token refresh endpoint described in section 3.
+    ```
+
+    For IDE-based agents like Continue.dev, use the `@file` reference syntax to attach the file to your chat message.
+  </Step>
+</Steps>
+
+## Best Practices for AI-Ready Confluence
+
+The more structured and current your Confluence pages are, the better your agent's output will be. Apply these practices to maximize the value of your documentation as AI context.
+
+- **Use consistent page templates.** An ADR template with fixed sections (Context, Decision, Consequences) gives the agent predictable structure to parse. The same applies to Design Doc and Runbook templates.
+- **Keep decision records up to date.** The agent reads what you wrote. An ADR that records a superseded decision will produce code based on the old approach. Mark deprecated decisions clearly and link to the replacement.
+- **Label pages with `ai-context`.** Creating a Confluence label like `ai-context` gives you a reliable way to query the exact pages you want the agent to use: `"Find all pages labeled ai-context in the AUTH space"`.
+- **Include code examples and interface definitions.** Paste in interface contracts, OpenAPI snippets, and example request/response payloads. The agent uses these as ground truth when generating implementations.
+
+<Note>
+  Confluence Server (the on-premise edition that predates Data Center) has limited REST API support and lacks some content expansion options used in this guide. If you are running Confluence Server, consider migrating to Data Center or Cloud to get full API access and the best AI agent integration experience.
+</Note>

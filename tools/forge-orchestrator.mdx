@@ -1,0 +1,65 @@
+---
+title: "Forge Orchestrator: Multi-AI Agent Code Collaboration"
+sidebarTitle: "Forge Orchestrator"
+description: "Forge Orchestrator runs Claude Code, Codex CLI, and Gemini CLI on shared repos simultaneously, using file locking to prevent conflicts and a knowledge flywheel to capture decisions."
+---
+
+Forge Orchestrator (⭐ 128 stars, written in Rust) solves the multi-agent conflict problem: it lets Claude Code, OpenAI Codex CLI, and Gemini CLI work on the same codebase simultaneously without overwriting each other's work, via file locking and a shared knowledge flywheel. Ship the single 4.7 MB binary, point it at your repo, and multiple AI agents coordinate automatically while Forge captures every cross-agent decision for future sessions.
+
+## Key Features
+
+- **File locking**: Prevents multiple agents from editing the same file concurrently
+- **Knowledge flywheel**: Captures cross-agent decisions, patterns, and learnings
+- **Drift detection**: Flags when in-progress code diverges from specs
+- **Headless CI mode**: `forge run` for automated pipelines
+- Single 4.7 MB Rust binary, zero dependencies
+
+## Installation
+
+```bash
+cargo install forge-orchestrator
+# or download the binary from GitHub releases
+```
+
+## Core Commands
+
+| Command | Description |
+|---|---|
+| `forge run` | Headless execution for CI/CD pipelines |
+| `forge ship` | Interactive ceremony: review → commit → push |
+| `forge dashboard` | TUI dashboard showing agent activity |
+| `forge mcp` | Start the MCP server (11 tools for JIRA/task integration) |
+
+## Multi-Agent Workflow
+
+Assign specific tasks to specific agents by declaring responsibilities in `forge-config.toml`. Forge enforces file-level locking so Claude and Codex never step on each other, even when working on adjacent modules.
+
+```toml forge-config.toml
+[agents]
+claude = { model = "claude-opus-4", tasks = ["backend", "api"] }
+codex  = { model = "gpt-4-turbo",   tasks = ["frontend", "tests"] }
+```
+
+Once configured, run `forge dashboard` to watch each agent's progress in real time. The knowledge flywheel records every decision — naming conventions, architectural choices, edge-case handling — so later agents inherit context from earlier ones in the same session.
+
+## Real-World Results
+
+In one recorded Forge session, a 94-line spec produced **5,306 lines of working code** across three AI tools running in parallel. Forge's drift detection caught two cases where generated code diverged from the spec midway through and automatically paused the affected agent for human review before merging.
+
+## CI/CD Integration
+
+Drop `forge run` into your pipeline to execute the full multi-agent implementation stage automatically. Pair it with `forge ship` to commit and push on success.
+
+```yaml .gitlab-ci.yml
+ai-implementation:
+  stage: implement
+  script:
+    - forge run --spec ./specs/PROJ-123.md --commit
+    - forge ship
+```
+
+You can scope `--spec` to any markdown file, including specs pulled directly from Confluence or exported from JIRA.
+
+<Tip>
+Use Forge's built-in JIRA MCP integration (`forge mcp`) to pull spec context directly from JIRA tickets. Pass the ticket key with `forge run --jira PROJ-123` and Forge fetches the description, acceptance criteria, and linked Confluence pages automatically — no manual copy-paste required.
+</Tip>

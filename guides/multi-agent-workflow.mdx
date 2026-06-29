@@ -1,0 +1,116 @@
+---
+title: "Run Multiple AI Agents on the Same Codebase"
+sidebarTitle: "Multi-Agent Workflow"
+description: "Orchestrate Claude and Codex working simultaneously on different parts of your codebase using Forge Orchestrator's file locking and knowledge flywheel."
+---
+
+When a JIRA epic has multiple independent tickets, you can run Claude and Codex simultaneously on different parts of the codebase to parallelize implementation. This guide shows how to use Forge Orchestrator to prevent conflicts and keep agents in sync.
+
+## When to Use Multiple Agents
+
+Not every ticket warrants a multi-agent setup. Use it when you have:
+
+- **Large JIRA epics with independent sub-tasks** — e.g. PROJ-460 (auth service) and PROJ-461 (billing service) share no files
+- **Separate frontend and backend tasks** that do not touch the same source files or interfaces
+- **One agent implementing, another writing tests concurrently** — e.g. Claude writes the feature while Codex generates the test suite against the same spec
+
+Avoid multi-agent workflows when tasks share a critical file (e.g. a shared schema or config) — complete those sequentially instead.
+
+## Setting Up Forge Orchestrator
+
+<Steps>
+  <Step title="Install Forge">
+    Install the Forge Orchestrator CLI via Cargo:
+
+    ```bash
+    cargo install forge-orchestrator
+    ```
+
+    Confirm the installation:
+
+    ```bash
+    forge --version
+    ```
+  </Step>
+
+  <Step title="Create a forge-config.toml">
+    Add a `forge-config.toml` to your repo root. This file defines which agent operates on which directories:
+
+    ```toml forge-config.toml
+    [project]
+    name = "my-project"
+    jira_key_prefix = "PROJ"
+
+    [agents]
+    claude = { model = "claude-opus-4", scope = ["src/backend/", "src/api/"] }
+    codex = { model = "gpt-4-turbo", scope = ["src/frontend/", "src/tests/"] }
+
+    [mcp]
+    atlassian = { url = "https://mcp.atlassian.com/v1/mcp" }
+    ```
+
+    The `scope` arrays are the file-lock boundaries. Claude cannot touch `src/frontend/` and Codex cannot touch `src/backend/`.
+  </Step>
+
+  <Step title="Create Spec Files for Each Agent">
+    Write a plain-language spec file for each agent's task. Place them in a `specs/` directory at the repo root:
+
+    ```markdown specs/PROJ-456-backend.md
+    # PROJ-456: Rate Limiting Backend
+    Implement rate limiting middleware in src/backend/middleware/
+    targeting the API gateway. Read the linked Confluence ADR for
+    the accepted algorithm and storage backend choice.
+    ```
+
+    Create one spec file per JIRA ticket being worked in parallel.
+  </Step>
+
+  <Step title="Run the Orchestrator">
+    Point Forge at your specs directory to start both agents simultaneously:
+
+    ```bash
+    forge run --specs specs/
+    ```
+
+    Forge reads each spec file, determines which agent handles it based on `forge-config.toml` scope, and starts both agents in parallel.
+  </Step>
+
+  <Step title="Monitor in the TUI Dashboard">
+    Open the live terminal dashboard to watch both agents in real time:
+
+    ```bash
+    forge dashboard
+    ```
+
+    The dashboard shows each agent's current file, active locks, progress percentage, and the knowledge flywheel log of shared decisions.
+  </Step>
+</Steps>
+
+## Conflict Prevention
+
+Forge uses **file locking** to guarantee that two agents never write to the same file at the same time. If Claude is editing `src/api/gateway.ts`, Codex cannot open that file until Claude releases the lock. Lock acquisition is logged in the dashboard with timestamps.
+
+The **knowledge flywheel** is a shared decision log that both agents read and write to during the session. When Claude decides on a specific error response format, that decision is recorded — Codex will use the same format in the test fixtures it generates, without you having to intervene.
+
+## Reviewing Multi-Agent Output
+
+After both agents finish, review and ship their combined changes in one go:
+
+1. Run `forge ship` to enter the review ceremony:
+
+   ```bash
+   forge ship
+   ```
+
+2. The TUI presents each agent's changes **file by file**. You can see which agent authored each change.
+
+3. For each file, choose one of:
+   - **Approve** — include as-is
+   - **Reject** — discard the change
+   - **Modify** — open your editor inline and adjust before approving
+
+4. Once you have reviewed all files, Forge commits the approved set and opens a single MR containing all changes, with the JIRA keys included in the commit message automatically.
+
+<Warning>
+  Start small. Run your first multi-agent workflow on a non-critical feature — a new utility function or a low-risk service — before applying it to production-critical code. File locking prevents write conflicts, but both agents still need well-scoped specs to avoid producing logically inconsistent implementations. Validate the pattern on a safe ticket first.
+</Warning>

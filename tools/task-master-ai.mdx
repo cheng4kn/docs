@@ -1,0 +1,124 @@
+---
+title: "Task Master AI: LLM-Powered Task Trees for Developers"
+sidebarTitle: "Task Master AI"
+description: "Task Master AI parses PRDs and specs into dependency-aware task trees using Claude or any LLM, running as an MCP server inside Cursor, VS Code, and Claude Code."
+---
+
+Task Master AI (`claude-task-master`, ⭐ 26K stars on GitHub) is the most popular open-source AI task management system for IDE-native development. It parses product requirement documents and technical specifications into structured, dependency-aware task trees and manages them directly inside your IDE — no external project management tool required. Unlike JIRA or Linear, Task Master AI lives in your repository alongside your code, treated as a first-class engineering artifact that your LLM agent can read, update, and act on throughout the development process.
+
+## Key Features
+
+Task Master AI is built around a simple but powerful idea: your LLM agent should know exactly what to build next, in what order, and why — derived directly from your specification documents.
+
+- **PRD parsing**: Feed any product requirement document, technical spec, or design brief to Task Master AI and it generates a structured task tree with titles, descriptions, acceptance criteria, and explicit dependency relationships between tasks.
+- **MCP server mode**: Task Master AI runs as a local MCP server, exposing its task management tools directly to Cursor, Windsurf, VS Code (via the Copilot MCP integration), and any other MCP-compatible agent runtime.
+- **Multi-model architecture**: Configure a **main model** (used for task execution and code generation), a **research model** (used for web research and knowledge retrieval), and a **fallback model** (used when the primary model is unavailable or rate-limited).
+- **Broad LLM support**: Works with Claude (Anthropic), GPT and o-series models (OpenAI), Gemini (Google), Perplexity, Groq, and locally-hosted models via Ollama. You are not locked into a single provider.
+- **Claude Code and Codex CLI compatibility**: Task Master AI works natively with both Claude Code (Anthropic's terminal-based agent) and OpenAI Codex CLI, making it a natural companion for headless agent workflows.
+
+## Installation
+
+<Steps>
+  <Step title="Install Task Master AI globally via npm">
+    Run the following command in your terminal to install the `task-master-ai` CLI globally:
+
+    ```bash
+    npm install -g task-master-ai
+    ```
+
+    After installation, verify it is available by running `task-master --version`.
+  </Step>
+  <Step title="Initialize Task Master AI in your project">
+    Navigate to your project's root directory and run:
+
+    ```bash
+    task-master init
+    ```
+
+    This creates a `.taskmaster/` directory in your project root containing the task database, configuration file, and a sample PRD template. It also adds `.taskmaster/` to your `.gitignore` by default (you can change this if you want tasks tracked in version control).
+  </Step>
+  <Step title="Configure your LLM API key">
+    Create or edit the `.env` file in your project root and add your API key for the LLM provider you want to use:
+
+    ```bash .env
+    # Anthropic Claude (recommended for best task parsing quality)
+    ANTHROPIC_API_KEY=sk-ant-...
+
+    # Or OpenAI GPT / o-series
+    OPENAI_API_KEY=sk-...
+
+    # Or Google Gemini
+    GOOGLE_GENERATIVE_AI_API_KEY=...
+    ```
+
+    Task Master AI reads this file automatically. You can also configure the main, research, and fallback models by editing `.taskmaster/config.json` after initialization.
+  </Step>
+  <Step title="Add the MCP server to your IDE">
+    To give your IDE's AI agent access to Task Master AI's tools, add the MCP server configuration to your IDE. See the **MCP Server Config** section below for the exact configuration snippet.
+  </Step>
+</Steps>
+
+## MCP Server Config
+
+Add the following to your Cursor MCP configuration file at `~/.cursor/mcp.json` to register Task Master AI as a local MCP server:
+
+```json ~/.cursor/mcp.json
+{
+  "mcpServers": {
+    "task-master-ai": {
+      "command": "task-master",
+      "args": ["mcp"]
+    }
+  }
+}
+```
+
+For VS Code with the Copilot MCP integration, add the equivalent entry to `.vscode/mcp.json` in your project root:
+
+```json .vscode/mcp.json
+{
+  "servers": {
+    "task-master-ai": {
+      "command": "task-master",
+      "args": ["mcp"],
+      "type": "stdio"
+    }
+  }
+}
+```
+
+Restart your IDE after saving the configuration. Your agent will now have access to tools like `get_tasks`, `get_next_task`, `set_task_status`, `expand_task`, and `add_task` — allowing it to navigate and update the task tree autonomously while implementing your project.
+
+## Core Commands
+
+Use the Task Master AI CLI directly from your terminal for quick task management operations without invoking a full agent session.
+
+| Command | Description |
+|---|---|
+| `task-master parse-prd <file>` | Parse a PRD or spec file into a structured task tree |
+| `task-master list` | List all tasks with their current status and dependencies |
+| `task-master next` | Get the next recommended task to work on (respects dependencies) |
+| `task-master set-status --id=5 done` | Mark task #5 as complete |
+| `task-master expand --id=3` | Break task #3 into granular subtasks using the LLM |
+| `task-master show --id=7` | Display full details for task #7 including acceptance criteria |
+| `task-master add-task` | Interactively add a new task to the tree |
+| `task-master deps --id=4` | Show all tasks that task #4 depends on or blocks |
+
+The `next` command is particularly useful in agent workflows — it evaluates the current completion status of all tasks, respects the dependency graph, and returns the single highest-priority task that is safe to work on right now.
+
+## Integrating with JIRA
+
+Task Master AI is a file-based, repository-native tool — it does not connect to JIRA or any other project management platform by default. This is intentional: the task tree lives in your codebase, versioned alongside your code, and is accessible to any agent or developer without external service credentials.
+
+To bridge Task Master AI with JIRA, run the **Atlassian Rovo MCP Server** alongside it. With both MCP servers active in your IDE, your agent can cross-reference Task Master tasks with live JIRA issues. For example, you can ask the agent:
+
+```text
+Work on task 12 from the task tree. Reference PROJ-890 in JIRA for
+the acceptance criteria and link the completed PR to that ticket.
+```
+
+The agent will call Task Master AI's `get_task` tool to retrieve the task details and the Rovo MCP's `get_issue` tool to fetch the JIRA acceptance criteria — combining both sources of context before writing any code.
+
+<Tip>
+  You can generate a Task Master AI task tree directly from your existing Confluence documentation. Export any Confluence page as a PDF or copy the page content as plain text, then run `task-master parse-prd <file>` against it. Task Master AI treats the document as a specification and extracts actionable tasks from it automatically — making it easy to convert an architecture decision record, a technical design doc, or a sprint planning page into a development task tree without rewriting anything.
+</Tip>

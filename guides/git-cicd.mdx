@@ -1,0 +1,110 @@
+---
+title: "Self-Hosted Git and CI/CD for AI Workflows"
+sidebarTitle: "Git & CI/CD"
+description: "Configure self-hosted Git (Gitea, GitLab CE) and CI/CD pipelines to work with AI coding agents, including automated JIRA ticket transitions on merge."
+---
+
+This guide covers configuring your self-hosted Git instance (Gitea or GitLab Community Edition) and CI/CD pipelines to integrate with AI coding tools, including the critical pattern of automatically closing JIRA tickets when an MR is merged. Closing the loop between a merged branch and a resolved JIRA issue is what makes the full JIRA → IDE → Git → JIRA lifecycle work without manual status updates.
+
+## Git Platform Compatibility
+
+<Tabs>
+  <Tab title="GitLab CE">
+    GitLab Community Edition has a built-in JIRA integration under **Settings → Integrations → JIRA**. It supports Smart Commits, issue linking from MR descriptions, and — with the right transition configuration — automatic ticket closure on merge. The **JIRA GitLab Helper** and **Forge Orchestrator MCP** tools also target GitLab's API directly, making it the most fully integrated self-hosted option.
+  </Tab>
+  <Tab title="Gitea">
+    Gitea does not have a native JIRA integration, but it supports Gitea Actions (compatible with GitHub Actions syntax), which lets you add a CI workflow that calls the JIRA REST API on every merged pull request. The **Gitea MCP server** exposes repository and PR data to your AI agent, and a small CI script handles the JIRA transition.
+  </Tab>
+</Tabs>
+
+## GitLab CE: JIRA Smart Commits
+
+GitLab CE supports JIRA Smart Commits natively through its integration settings. Once configured, any commit message containing a JIRA issue key and a transition directive is processed automatically when the commit is pushed.
+
+<Steps>
+  <Step title="Enable the JIRA integration in GitLab">
+    In your GitLab project, go to **Settings → Integrations → JIRA**. Fill in your JIRA server URL (e.g. `https://jira.yourcompany.com`) and your API credentials. Use a dedicated service account token rather than a personal token so the integration does not break if a team member leaves.
+  </Step>
+  <Step title="Enable automatic issue transition on merge">
+    In the same integration settings panel, enable the option **"Transition JIRA issues to Done on merge"**. Select the target transition that maps to your team's Done column. GitLab will call the JIRA transition API whenever a branch containing a matching commit is merged into your default branch.
+  </Step>
+  <Step title="Use Smart Commit syntax in commit messages">
+    In your commit messages, place the JIRA issue key followed by the `#done` directive:
+
+    ```
+    PROJ-123 #done Implemented auth endpoint
+    ```
+
+    GitLab parses the key and directive on push and forwards the transition request to JIRA. You can also use `#comment` to post a comment without transitioning, or `#time` to log time.
+  </Step>
+  <Step title="Verify the transition">
+    Push a commit with the Smart Commit syntax to your branch and open a merge request. After merging into `main`, check JIRA to confirm the ticket moved to Done. If it did not transition, review the GitLab integration logs under **Settings → Integrations → JIRA → Recent Deliveries**.
+  </Step>
+</Steps>
+
+## Gitea: JIRA Integration via CI Scripts
+
+For Gitea, you implement the JIRA transition as a CI workflow that runs when a pull request is merged. Add the following workflow file to your repository:
+
+```yaml .gitea/workflows/close-jira.yml
+name: Close JIRA on Merge
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+jobs:
+  close-ticket:
+    if: github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract JIRA key
+        run: |
+          JIRA_KEY=$(echo "${{ github.event.pull_request.title }}" | grep -oE '[A-Z]+-[0-9]+')
+          echo "JIRA_KEY=$JIRA_KEY" >> $GITHUB_ENV
+      - name: Transition to Done
+        run: |
+          curl -X POST -u "$JIRA_USER:$JIRA_TOKEN" \
+            "$JIRA_URL/rest/api/2/issue/$JIRA_KEY/transitions" \
+            -H 'Content-Type: application/json' \
+            -d '{"transition":{"id":"31"}}'
+        env:
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+```
+
+The workflow extracts the JIRA key from the MR title using a regex, then POSTs to the JIRA transitions API. The transition ID `31` is the most common ID for "Done" in default JIRA workflows — ask your JIRA administrator to confirm the correct ID for your project, or retrieve it with:
+
+```bash
+curl -u your.email@company.com:YOUR_API_TOKEN \
+  "https://jira.yourcompany.com/rest/api/2/issue/PROJ-123/transitions"
+```
+
+## MR Title Convention
+
+The Gitea CI script (and the GitLab integration) both rely on finding a JIRA issue key in the MR title. Enforce a consistent title format across your team to make auto-close reliable.
+
+- Always prefix MR titles with the JIRA key: `PROJ-123: Feature description`
+- Use the same key in your branch name: `feature/PROJ-123-user-auth`
+- Add a CI check that validates the MR title format before allowing merge:
+
+```yaml .gitea/workflows/validate-mr-title.yml
+name: Validate MR Title
+on:
+  pull_request:
+    types: [opened, edited, synchronize]
+jobs:
+  check-title:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for JIRA key in title
+        run: |
+          if ! echo "${{ github.event.pull_request.title }}" | grep -qE '^[A-Z]+-[0-9]+:'; then
+            echo "MR title must start with a JIRA issue key, e.g. PROJ-123: description"
+            exit 1
+          fi
+```
+
+<Warning>
+  Store your JIRA API token and user credentials as **CI/CD secrets** (Gitea: Repository Settings → Secrets; GitLab: Settings → CI/CD → Variables), never as plain text in workflow files or repository config. Anyone with read access to the repository can see unmasked values in committed files, which would expose your JIRA instance to unauthorized access. Rotate any token that was accidentally committed immediately.
+</Warning>

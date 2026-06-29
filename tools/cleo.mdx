@@ -1,0 +1,75 @@
+---
+title: "CLEO: Persistent-Memory Agent Orchestration Platform"
+sidebarTitle: "CLEO"
+description: "CLEO keeps AI agent context alive across sessions with a semantic memory graph, 9-stage task lifecycle, and adapters for Claude, Copilot, Codex, Gemini, and more."
+---
+
+CLEO (kryptobaseddev/cleo, ⭐ 157 stars) solves one of the biggest pain points in AI-assisted development: context loss between sessions. Its BRAIN system persists agent observations, patterns, and learnings with semantic search so your AI agent remembers your codebase across restarts. Stop re-explaining your architecture, naming conventions, and past decisions every time you open a new chat — CLEO handles that automatically.
+
+## Core Systems
+
+CLEO is built around six interlocking subsystems, each addressing a distinct challenge in long-running AI-assisted projects:
+
+- **TASKS**: Structured task management with dependency graphs and priority queues
+- **LOOM**: A 9-stage task lifecycle — Draft → Ready → In Progress → Blocked → Review → Changes Requested → Approved → Done → Archived — giving every piece of work a clear state machine
+- **BRAIN**: Persistent semantic memory across sessions with 80%+ similarity auto-deduplication, so the same insight is never stored twice
+- **NEXUS**: Code intelligence layer for codebase queries — ask the agent "where is rate limiting implemented?" and NEXUS answers from an indexed graph of your source
+- **CANT**: An agent DSL for defining custom behaviours, guardrails, and response templates without writing glue code
+- **CONDUIT**: An agent-to-agent messaging bus that lets specialised sub-agents hand off context without losing state
+
+## Supported AI Tools
+
+CLEO ships adapters for every major AI coding assistant. You can switch agents mid-project and BRAIN memory transfers seamlessly:
+
+Claude Code · Cursor · GitHub Copilot · Windsurf · Codex CLI · Gemini CLI · Kiro
+
+## Getting Started
+
+<Steps>
+  <Step title="Install CLEO globally">
+    ```bash
+    npm install -g cleo-agent
+    ```
+  </Step>
+  <Step title="Initialise in your project">
+    Run this from the root of your repository. CLEO creates a `.cleo/` directory for config and local memory storage.
+
+    ```bash
+    cleo init
+    ```
+  </Step>
+  <Step title="Configure your AI provider">
+    Open the generated `cleo.config.json` and set your preferred provider and model:
+
+    ```json cleo.config.json
+    {
+      "provider": "anthropic",
+      "model": "claude-opus-4",
+      "brain": {
+        "similarityThreshold": 0.80,
+        "maxMemories": 10000
+      }
+    }
+    ```
+  </Step>
+  <Step title="Start a session">
+    ```bash
+    cleo session start
+    ```
+
+    CLEO opens an interactive session with your chosen AI agent, injecting the top relevant memories from BRAIN into the initial context window automatically.
+  </Step>
+  <Step title="Let BRAIN index your codebase">
+    On first run, CLEO's BRAIN indexes your entire codebase and any past session logs it finds. Subsequent sessions load in seconds from the cached embedding store. You don't need to do anything — indexing runs in the background.
+  </Step>
+</Steps>
+
+## BRAIN Memory
+
+BRAIN is CLEO's persistent memory engine. Every observation the agent makes — a design decision, a recurring bug pattern, a naming convention, a rejected approach — is stored as an embedding in a local vector database. When you start a new session, CLEO retrieves the top-ranked memories by semantic similarity to your current task and injects them into the agent's context window.
+
+The 80%+ similarity threshold for auto-deduplication means the memory store stays clean over time: if you tell the agent "we use JWT for authentication" in session 3 and again in session 7, BRAIN recognises the near-duplicate and merges the entries rather than inflating the store. The result is a compact, high-signal memory that grows smarter without growing noisy.
+
+<Tip>
+Use CLEO alongside the **Atlassian Rovo MCP** so that JIRA ticket context — acceptance criteria, comments, linked issues — is also persisted in BRAIN. When you start a new session on a ticket you worked on last week, CLEO surfaces both your code-level observations and the original JIRA requirements together, giving the agent full context with zero manual setup.
+</Tip>

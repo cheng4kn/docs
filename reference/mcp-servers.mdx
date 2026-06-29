@@ -1,0 +1,68 @@
+---
+title: "MCP Server Directory for AI Dev Tools"
+sidebarTitle: "MCP Servers"
+description: "A directory of MCP servers for connecting JIRA, Confluence, Git, and other dev tools to AI coding agents in VS Code, Cursor, IntelliJ IDEA, and Claude Code."
+---
+
+Model Context Protocol (MCP) servers are the glue that connects your project management tools, documentation, and version control to AI coding agents. This directory lists the MCP servers most relevant to the JIRA + Confluence + Git workflow.
+
+## Official MCP Servers
+
+These servers are published and maintained by the platform vendors themselves.
+
+| Server | Provider | URL / Install | Covers |
+|--------|----------|---------------|--------|
+| Atlassian Rovo MCP | Atlassian | `https://mcp.atlassian.com/v1/mcp` | JIRA + Confluence |
+| GitHub MCP | GitHub | `npx @github/mcp-server` | GitHub repos, PRs, issues |
+| GitLab MCP | GitLab | `npx @gitlab/mcp-server` | GitLab repos, MRs, issues |
+
+The GitLab MCP server works with both GitLab.com and self-hosted GitLab CE instances — configure the `GITLAB_URL` environment variable to point at your on-prem instance.
+
+## Community MCP Servers
+
+These servers are open-source projects built and maintained by the community.
+
+| Server | Repo | Install | Covers |
+|--------|------|---------|--------|
+| Task Master AI | eyaltoledano/claude-task-master | `npm install -g task-master-ai && task-master mcp` | File-based task trees |
+| Forge Orchestrator | nxtg-ai/forge-orchestrator | `forge mcp` | Multi-agent orchestration |
+| Markplane | zerowand01/markplane | `markplane serve` | Markdown tasks in repo |
+| Acendas Suite | acendas/atlassian-suite | (see repo) | 179 Atlassian tools |
+| Fenix | devshire/fenix | `fenix serve` | Work items + memory |
+
+## Generic MCP Config Template
+
+The MCP configuration format is consistent across VS Code, Cursor, and IntelliJ IDEA (via the MCP plugin). Use the template below as a starting point and adjust the server entries for the tools you need.
+
+```json .vscode/mcp.json
+{
+  "servers": {
+    "atlassian-rovo": {
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "type": "http"
+    },
+    "task-master": {
+      "command": "task-master",
+      "args": ["mcp"]
+    },
+    "gitlab": {
+      "command": "npx",
+      "args": ["@gitlab/mcp-server"],
+      "env": {
+        "GITLAB_URL": "https://gitlab.yourcompany.com",
+        "GITLAB_TOKEN": "your-token-here"
+      }
+    }
+  }
+}
+```
+
+**For IntelliJ IDEA:** place the equivalent configuration in your IDE's MCP plugin settings panel rather than a `.vscode/` file. The JSON structure is identical — only the file location differs.
+
+**For Cursor:** save the file as `.cursor/mcp.json` in your project root or in `~/.cursor/mcp.json` for global availability across all projects.
+
+**For Claude Code:** add the server entries to `~/.claude/mcp.json`. Claude Code reads this file on startup and connects to all listed servers.
+
+<Note>
+  You can run multiple MCP servers simultaneously. When your agent receives a prompt, it can query all connected servers in a single request — combining JIRA ticket data, Confluence page content, and Git repository context in one unified response. There is no need to choose between servers; connect all that are relevant to your workflow and let the agent decide what to fetch based on the task.
+</Note>

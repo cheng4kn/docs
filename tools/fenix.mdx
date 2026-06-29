@@ -1,0 +1,87 @@
+---
+title: "Fenix: AI-Native Workspace with Semantic Memory Graph"
+sidebarTitle: "Fenix"
+description: "Fenix provides 56+ MCP actions for work items, memories, docs, and sprints, with a semantic memory graph that persists context across AI coding sessions."
+---
+
+Fenix (fenix.devshire.app) is a commercial AI-native workspace platform that bridges project management and LLM coding agents through a comprehensive MCP server with 56+ actions. Its semantic memory graph ensures your AI agent retains context across sessions with 80%+ similarity auto-deduplication — so the agent you open on Monday picks up exactly where Friday's session left off, without you re-explaining a thing.
+
+## MCP Actions
+
+Fenix organises its 56+ MCP actions into six categories, covering the full lifecycle of an AI-assisted project:
+
+- **Work items**: Create, read, update, and delete tasks and epics; set priorities, assignees, and due dates; query by status or label
+- **Memories**: Store and retrieve semantic memories across sessions; the agent can save its own observations and query them in future sessions
+- **Docs**: Create and manage design docs, architecture decision records (ADRs), and living runbooks directly from your AI agent
+- **Rules**: Define project conventions — coding standards, naming patterns, forbidden patterns — that the agent must follow in every session
+- **Sprints**: Plan sprints, assign work items, track velocity, and view sprint health dashboards
+- **API catalog**: Register your internal API surfaces so the agent can query available endpoints before writing integration code
+
+## Supported AI Agents
+
+Fenix ships MCP adapters for every major AI coding tool. Memories and work items are shared across agents — switch from Claude Code to Cursor mid-sprint and the context travels with you:
+
+Claude Code · Cursor · GitHub Copilot · Windsurf · Codex CLI · Kiro · Gemini CLI · Aider
+
+## Getting Started
+
+<Steps>
+  <Step title="Sign up for Fenix">
+    Go to [fenix.devshire.app](https://fenix.devshire.app) and create an account. Fenix is currently in beta — early access is available on request.
+  </Step>
+  <Step title="Create a workspace">
+    After signing in, create a workspace for your organisation and add your first project. Fenix provisions a dedicated memory graph and API catalog for each project.
+  </Step>
+  <Step title="Install the Fenix CLI">
+    ```bash
+    npm install -g @devshire/fenix
+    ```
+  </Step>
+  <Step title="Authenticate">
+    ```bash
+    fenix login
+    ```
+
+    This opens a browser window to complete OAuth. Your credentials are stored securely in your OS keychain.
+  </Step>
+  <Step title="Add the Fenix MCP server to your IDE">
+    Run `fenix mcp config` to print the correct MCP entry for your IDE, or add it manually:
+
+    ```json .claude/mcp.json
+    {
+      "mcpServers": {
+        "fenix": {
+          "command": "fenix",
+          "args": ["mcp", "start", "--stdio"]
+        }
+      }
+    }
+    ```
+  </Step>
+  <Step title="Store your first memory">
+    With the MCP server running, tell your AI agent a fact about your project:
+
+    ```
+    "Remember that we use JWT for auth in this project"
+    ```
+
+    Fenix stores this as a semantic memory. In every future session, the agent retrieves this memory automatically when working on authentication-related tasks.
+  </Step>
+</Steps>
+
+## CLI & TUI
+
+Fenix includes a native CLI with Vim motions for power users who prefer the terminal. All work item and memory operations available in the web app are also available from the command line:
+
+| Command | Description |
+|---|---|
+| `fenix task list` | List all work items, with optional `--status` and `--sprint` filters |
+| `fenix task create` | Create a new task interactively with prompts for title, priority, and assignee |
+| `fenix memory add` | Store a memory manually (the agent can also do this autonomously) |
+| `fenix sprint status` | View sprint health: velocity, blockers, and completion percentage |
+
+The TUI (`fenix tui`) renders a full-screen board view with Vim-style `j`/`k` navigation, inline editing, and real-time updates from the MCP server.
+
+<Tip>
+Fenix is currently in **beta**. Sign up at [fenix.devshire.app](https://fenix.devshire.app) for early access. Beta users get direct access to the Fenix team for onboarding support and feature requests, and all beta data migrates automatically to the GA release.
+</Tip>

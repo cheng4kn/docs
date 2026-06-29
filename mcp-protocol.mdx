@@ -1,0 +1,180 @@
+---
+title: "Model Context Protocol (MCP): The AI Integration Layer"
+sidebarTitle: "MCP Protocol"
+description: "Understand how MCP servers connect JIRA, Confluence, Git, and IDE coding agents, enabling seamless context sharing across your AI development workflow."
+---
+
+Model Context Protocol (MCP) is an open standard published by Anthropic in late 2024 that defines how AI agents and IDEs exchange context with external tools and data sources. Before MCP, every AI coding tool needed its own bespoke plugin for every data source — a combinatorial maintenance burden that made deep integrations rare and brittle. MCP solves this by specifying a single client-server interface: any tool that exposes an MCP server can be queried by any IDE or agent that implements an MCP client, with no custom glue code required. For the KN Group development lifecycle, MCP is what allows a single LLM session in your IDE to simultaneously read an open JIRA ticket, retrieve the linked Confluence design doc, and inspect a file in your Git repository.
+
+## How MCP Works
+
+MCP uses a client-server architecture where the intelligence (the LLM agent) is always the client and the data sources are servers. The IDE or agent host runs the MCP client, which discovers available servers, negotiates capabilities, and issues structured requests. Each MCP server exposes a set of **tools** — named, typed functions the client can call — and optionally **resources**, which are readable data objects such as files or issue records.
+
+```
+IDE (Claude / Cursor / Copilot / JetBrains AI)
+              ↕ MCP (JSON-RPC over stdio or HTTP/SSE)
+┌──────────────────────────────────────────────┐
+│  JIRA MCP Server          (tickets, sprints) │
+│  Confluence MCP Server    (pages, spaces)    │
+│  Git / Gitea MCP Server   (repos, PRs, refs) │
+└──────────────────────────────────────────────┘
+```
+
+The transport layer between client and server is either **stdio** (the IDE spawns the server as a child process and communicates over standard input/output) or **HTTP with Server-Sent Events** (the server runs as a persistent HTTP service). Stdio is simpler for local development. HTTP/SSE is required when the MCP server runs on a remote host, such as a shared team server or a cloud-hosted integration endpoint like `mcp.atlassian.com`.
+
+When the LLM generates a response that requires external data — for example, "fetch the acceptance criteria for PROJ-42" — the MCP client intercepts the tool call, routes it to the appropriate server, and injects the result back into the model's context before the response is finalised. From the developer's perspective this is invisible: you ask the agent about a ticket and it answers with live data.
+
+## Configuring MCP in Your IDE
+
+Each IDE stores MCP server configuration in a JSON file. The structure is similar across tools: a named list of servers, each with a command to start it (for stdio) or a URL to connect to (for HTTP/SSE), plus any environment variables for authentication.
+
+### VS Code
+
+Create or edit `.vscode/mcp.json` in your project root, or add the `mcp` key to your user-level `settings.json` for a global configuration.
+
+```json
+{
+  "servers": {
+    "atlassian": {
+      "type": "stdio",
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": {
+        "JIRA_URL": "https://your-org.atlassian.net",
+        "JIRA_USERNAME": "your-email@example.com",
+        "JIRA_API_TOKEN": "${env:JIRA_API_TOKEN}",
+        "CONFLUENCE_URL": "https://your-org.atlassian.net/wiki",
+        "CONFLUENCE_USERNAME": "your-email@example.com",
+        "CONFLUENCE_API_TOKEN": "${env:CONFLUENCE_API_TOKEN}"
+      }
+    },
+    "gitea": {
+      "type": "stdio",
+      "command": "gitea-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "GITEA_URL": "https://git.your-org.internal",
+        "GITEA_TOKEN": "${env:GITEA_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Reference environment variables using `${env:VARIABLE_NAME}` rather than hardcoding secrets in the config file.
+
+### Cursor
+
+Add your MCP servers to `~/.cursor/mcp.json`. This file applies globally to all projects opened in Cursor.
+
+```json
+{
+  "mcpServers": {
+    "atlassian": {
+      "command": "uvx",
+      "args": ["mcp-atlassian"],
+      "env": {
+        "JIRA_URL": "https://your-org.atlassian.net",
+        "JIRA_USERNAME": "your-email@example.com",
+        "JIRA_API_TOKEN": "your-api-token",
+        "CONFLUENCE_URL": "https://your-org.atlassian.net/wiki",
+        "CONFLUENCE_USERNAME": "your-email@example.com",
+        "CONFLUENCE_API_TOKEN": "your-api-token"
+      }
+    },
+    "gitea": {
+      "command": "gitea-mcp",
+      "args": ["--transport", "stdio"],
+      "env": {
+        "GITEA_URL": "https://git.your-org.internal",
+        "GITEA_TOKEN": "your-gitea-token"
+      }
+    }
+  }
+}
+```
+
+To apply MCP settings at the project level instead of globally, create `.cursor/mcp.json` in the project root. Project-level settings override global settings for servers with the same name.
+
+### IntelliJ IDEA
+
+IntelliJ IDEA 2024.3 and later includes built-in MCP client support in the AI Assistant plugin. Configure servers in **Settings → Tools → AI Assistant → Model Context Protocol (MCP)**.
+
+Click **Add Server** and enter the following for each server:
+
+```json
+{
+  "name": "atlassian",
+  "command": "uvx",
+  "args": ["mcp-atlassian"],
+  "env": {
+    "JIRA_URL": "https://your-org.atlassian.net",
+    "JIRA_USERNAME": "your-email@example.com",
+    "JIRA_API_TOKEN": "your-api-token",
+    "CONFLUENCE_URL": "https://your-org.atlassian.net/wiki",
+    "CONFLUENCE_USERNAME": "your-email@example.com",
+    "CONFLUENCE_API_TOKEN": "your-api-token"
+  }
+}
+```
+
+Alternatively, edit `~/.config/JetBrains/<IDE>/mcp-servers.json` directly if you prefer file-based configuration. IntelliJ IDEA watches the file for changes and reloads servers without requiring a restart.
+
+## Atlassian Rovo MCP
+
+Atlassian provides an official, hosted MCP server for JIRA and Confluence at `https://mcp.atlassian.com/v1/mcp`. This is the recommended integration point for teams on Atlassian Cloud because it is maintained by Atlassian, supports the full range of JIRA and Confluence APIs, and authenticates via OAuth 2.1 — meaning no long-lived API tokens need to be stored locally.
+
+**Endpoint:** `https://mcp.atlassian.com/v1/mcp`  
+**Transport:** HTTP with Server-Sent Events (SSE)  
+**Authentication:** OAuth 2.1 (authorisation code flow with PKCE)
+
+To configure the Atlassian Rovo MCP server in VS Code:
+
+```json
+{
+  "servers": {
+    "atlassian-rovo": {
+      "type": "http",
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:ATLASSIAN_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+To configure it in Cursor:
+
+```json
+{
+  "mcpServers": {
+    "atlassian-rovo": {
+      "url": "https://mcp.atlassian.com/v1/mcp",
+      "headers": {
+        "Authorization": "Bearer ${env:ATLASSIAN_MCP_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Obtain your OAuth token by authorising the MCP integration through your Atlassian account at `https://id.atlassian.com`. The token grants the agent read and write access to JIRA and Confluence resources within your organisation's permission boundaries.
+
+## Security Considerations
+
+MCP gives AI agents live, read-write access to your project management system, documentation store, and source code repositories. Treat MCP access tokens with the same care as production database credentials.
+
+**OAuth scopes** — Request only the scopes your workflow requires. For a read-heavy workflow (fetching tickets and docs), request `read:jira-work` and `read:confluence-content.all`. Add `write:jira-work` only if the agent needs to post comments or transition tickets. Avoid `admin:jira` entirely unless absolutely necessary.
+
+**Token storage** — Never hardcode tokens in MCP config files that are committed to version control. Use environment variables (referenced as `${env:TOKEN_NAME}` in config files), a secrets manager such as HashiCorp Vault, or your IDE's built-in credential store.
+
+**Agent permission review** — Before connecting an MCP server to a new agent, review what tools that server exposes. An MCP server with `delete_issue` or `delete_page` tools allows the agent to destroy data. Prefer MCP servers that expose only the tools your workflow needs.
+
+**Audit logging** — Enable audit logging on your Atlassian organisation to track which MCP operations are performed and by which token. This creates an audit trail that distinguishes agent actions from human actions during incident investigation.
+
+**Network boundary** — Self-hosted MCP servers should not be exposed to the public internet. Place them behind a VPN or internal load balancer and restrict ingress to developer workstations and CI runner IP ranges.
+
+<Warning>
+  Never share your MCP access tokens with other developers or commit them to version control — even in private repositories. A compromised MCP token gives full programmatic access to every JIRA project and Confluence space your account can reach. If you suspect a token has been exposed, revoke it immediately at `https://id.atlassian.com/manage-profile/security/api-tokens` and rotate any CI/CD secrets that reference it.
+</Warning>

@@ -1,0 +1,90 @@
+---
+title: "AI Task Engineering Tool Comparison Matrix"
+sidebarTitle: "Tool Comparison"
+description: "Compare AI Task Engineering tools by JIRA support, Confluence support, IDE compatibility, LLM support, Git integration, and open-source availability."
+---
+
+Use this reference to choose the right combination of tools for your workflow. The comparison covers the 10 most relevant AI Task Engineering tools for the JIRA → Confluence → IDE/LLM → Git → CI/CD lifecycle.
+
+## Feature Comparison Matrix
+
+| Tool | JIRA | Confluence | IDEA/JetBrains | Claude | Codex | Self-hosted Git | Open Source |
+|------|:----:|:----------:|:--------------:|:------:|:-----:|:---------------:|:-----------:|
+| Atlassian Rovo MCP | ✅ Native | ✅ Native | ✅ via MCP | ✅ | ✅ | ⚠️ Cloud only | ❌ |
+| GitHub Copilot for JIRA | ✅ Official | ✅ via Rovo | ✅ | ✅ | ✅ | ⚠️ GitHub.com | ❌ |
+| Tabnine Enterprise | ✅ DC + Cloud | ⚠️ Indirect | ✅ Native | ⚠️ | ⚠️ | ✅ | ❌ |
+| Task Master AI | ⚠️ via MCP | ⚠️ via MCP | ✅ via MCP | ✅ | ✅ | ✅ | ✅ |
+| Forge Orchestrator | ⚠️ via MCP | ⚠️ via MCP | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Acendas Suite | ✅ | ✅ | ✅ via MCP | ✅ | ⚠️ | ⚠️ Bitbucket | ✅ |
+| CLEO | ⚠️ via MCP | ⚠️ via MCP | ✅ | ✅ | ✅ | ✅ | ✅ |
+| JIRA GitLab Helper | ✅ | ✅ | ✅ VS Code | ✅ | ✅ | ✅ GitLab CE | ✅ |
+| Markplane | ⚠️ Local-first | ⚠️ | ✅ via MCP | ✅ | ✅ | ✅ | ✅ |
+| Fenix | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
+
+> ✅ Full support &nbsp;|&nbsp; ⚠️ Partial / via adapter &nbsp;|&nbsp; ❌ Not supported
+
+## Recommended Stacks
+
+Choose the stack that matches your team's infrastructure and workflow.
+
+<AccordionGroup>
+  <Accordion title="Enterprise Atlassian Cloud">
+    Best for large teams on Atlassian Cloud with managed infrastructure:
+
+    - **Rovo MCP** — native JIRA + Confluence integration, zero config for Cloud tenants
+    - **Tabnine Enterprise** — zero data retention, enterprise security, JetBrains native
+    - **Acendas Suite** — 179 Atlassian-specific tools for deep ticket and doc automation
+  </Accordion>
+
+  <Accordion title="Self-hosted JIRA + GitLab CE">
+    Best for teams running JIRA Data Center and GitLab Community Edition on-premises:
+
+    - **Tabnine Enterprise** — Data Center support, stays on-prem
+    - **JIRA GitLab Helper** — purpose-built for the JIRA + GitLab CE combination
+    - **Forge Orchestrator** — works with any self-hosted Git provider
+  </Accordion>
+
+  <Accordion title="Open-source / Indie Dev (Cursor / Claude)">
+    Best for solo developers or small teams using Cursor or Claude Code with open tooling:
+
+    - **Task Master AI** — file-based task trees, fully open source, MCP-native
+    - **Rovo MCP** — connects to Atlassian Cloud if you use it; otherwise use GitLab MCP
+    - **Markplane** — keeps tasks in Markdown inside the repo, no external services
+  </Accordion>
+
+  <Accordion title="Multi-agent Power Users">
+    Best for teams running parallel AI agents on large epics:
+
+    - **Forge Orchestrator** — file locking, knowledge flywheel, multi-agent TUI
+    - **CLEO** — persistent agent memory across sessions
+    - **Atlassian MCP** — provides both agents shared access to the same JIRA + Confluence data
+  </Accordion>
+
+  <Accordion title="This Team (JIRA + Confluence + IDEA + Self-hosted Git)">
+    The recommended stack for the KN Group workflow:
+
+    - **Rovo MCP** (Atlassian Cloud) or **Tabnine Enterprise** (Data Center) — JIRA + Confluence context in the IDE
+    - **JIRA GitLab Helper** — MR-to-ticket linking and auto-close for self-hosted GitLab CE
+    - **Forge Orchestrator** — multi-agent parallelism when working on large epics
+    - **CLEO** — persistent memory so agents retain decisions across sessions
+  </Accordion>
+</AccordionGroup>
+
+## Decision Flowchart
+
+Work through these questions in order to narrow your tool selection:
+
+1. **Are you on Atlassian Cloud?**
+   → Yes: Start with **Rovo MCP** — it requires no additional setup for Cloud tenants.
+
+2. **Are you on JIRA Data Center (self-hosted)?**
+   → Yes: Use **Tabnine Enterprise** — it natively supports DC and keeps data on-prem.
+
+3. **Using GitLab CE for Git?**
+   → Yes: Add **JIRA GitLab Helper** — it handles MR linking, branch detection, and JIRA transitions for GitLab CE out of the box.
+
+4. **Need persistent agent memory across sessions?**
+   → Yes: Add **CLEO** or **Fenix** — both maintain a knowledge store that survives IDE restarts and project switches.
+
+5. **Need multi-agent parallelism on large epics?**
+   → Yes: Add **Forge Orchestrator** — it manages file locking, agent scopes, and produces a single reviewed MR from multiple agents' work.

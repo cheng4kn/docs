@@ -1,0 +1,51 @@
+---
+title: "AI Task Engineering: Tools for the Modern Dev Loop"
+sidebarTitle: "Introduction"
+description: "Learn how AI Task Engineering tools automate the JIRA-to-production lifecycle, from issue intake through code generation, review, and CI/CD closure."
+---
+
+AI Task Engineering is the practice of connecting project management signals directly to code generation and delivery pipelines — so that a JIRA ticket written by a product manager can become a merged, tested, deployed feature with minimal manual handoff. The KN Group AI Dev Toolkit documents the tools, protocols, and configuration patterns that make this possible in a real enterprise environment running self-hosted Git and Atlassian tooling.
+
+## What is AI Task Engineering?
+
+Traditional software delivery treats JIRA, Confluence, the IDE, Git, and CI/CD as separate concerns that developers manually bridge with copy-paste and context-switching. AI Task Engineering collapses those gaps by placing LLM-powered agents at the centre of the loop. These agents read tickets, retrieve architectural context, write code, open merge requests, and report outcomes — all without leaving the development environment.
+
+The key insight is that every stage of delivery already produces structured, machine-readable data: JIRA issues have fields and status transitions, Confluence pages have titles and labels, Git repositories have commit histories and diff outputs, and CI pipelines emit pass/fail signals. AI agents consume this structure as context and produce code or workflow actions as output. The developer's role shifts from context-switching executor to intent-setting reviewer.
+
+The KN Group toolkit curates the tools that best support this model inside an environment where data sovereignty, on-premises hosting, and Atlassian integration are non-negotiable requirements.
+
+## The Core Lifecycle
+
+The lifecycle this toolkit is built around has six distinct stages that form a closed loop. Understanding the full loop — rather than optimising individual stages in isolation — is what separates effective AI Task Engineering from simple autocomplete.
+
+1. **JIRA Issue** — A product manager or tech lead creates a ticket with a clear description, acceptance criteria, and story points. The ticket is the contract between intent and implementation.
+2. **Confluence Context** — Before any code is written, the AI agent retrieves relevant Architecture Decision Records, API specifications, and runbooks from Confluence. This grounds the agent in decisions already made and constraints already known.
+3. **IDE + LLM Coding** — The agent reads both the JIRA ticket and the Confluence pages through a Model Context Protocol (MCP) server, then generates or modifies code inside the developer's IDE. The developer reviews diffs in real time.
+4. **Git MR** — The agent creates a branch named after the JIRA issue key, commits the changes, and opens a Merge Request. The MR description is auto-populated with the ticket summary, acceptance criteria, and links back to Confluence.
+5. **CI/CD Pipeline** — Every push triggers automated tests, lint checks, and security scans. On merge to the main branch, the pipeline runs the full deployment sequence.
+6. **JIRA Ticket Auto-Closed** — A pipeline step calls the JIRA REST API to transition the originating ticket to **Done** and posts a comment with the deployment reference. Stakeholders receive a notification without anyone manually updating a status.
+
+## Why MCP Matters
+
+Model Context Protocol (MCP) is the open standard that makes the lifecycle above practical rather than theoretical. Without a common integration protocol, connecting an LLM to JIRA, Confluence, and Git would require custom API wrappers for every combination of tools. MCP defines a client-server interface where any IDE or agent can act as an MCP client, and any tool — JIRA, Confluence, Git, a database, a REST API — can expose itself as an MCP server.
+
+The practical consequence is that you configure your MCP servers once — typically in a single JSON file in your IDE or a shared team config — and every AI agent in your stack gains access to the same live project context. The agent can query open tickets, search Confluence for relevant docs, read a file from a Git repository, or post a comment on a PR, all through one protocol layer. See the [MCP Protocol](/mcp-protocol) page for configuration examples.
+
+## Tool Categories
+
+The tools documented in this toolkit fall into four categories. Each card below links to the relevant section of the docs.
+
+<CardGroup cols={2}>
+  <Card title="Full-Platform Solutions" icon="layer-group" href="/reference/tool-comparison#full-platform-solutions">
+    End-to-end AI development platforms such as Atlassian Rovo and GitHub Copilot Workspace that manage the entire lifecycle from ticket to PR inside a single product.
+  </Card>
+  <Card title="IDE Agent Tools" icon="code" href="/reference/tool-comparison#ide-agent-tools">
+    In-editor AI assistants including Claude Code, Cursor, and JetBrains AI Assistant that generate and refactor code with full MCP context awareness.
+  </Card>
+  <Card title="Task Orchestration" icon="sitemap" href="/reference/tool-comparison#task-orchestration">
+    Headless orchestration tools such as OpenHands and SWE-agent that run AI coding tasks autonomously in CI pipelines or on remote servers without a GUI.
+  </Card>
+  <Card title="Supplementary Utilities" icon="puzzle-piece" href="/reference/tool-comparison#supplementary-utilities">
+    Focused utilities covering JIRA MCP servers, Confluence MCP servers, self-hosted Git integrations, and CI/CD webhook bridges that complete the integration layer.
+  </Card>
+</CardGroup>

@@ -1,0 +1,65 @@
+---
+title: "Tabnine: Enterprise AI Coding with JIRA Agents"
+sidebarTitle: "Tabnine"
+description: "Tabnine's JIRA Implementation Agent generates code from tickets and validates it against acceptance criteria, supporting JIRA Cloud and Data Center with zero data retention."
+---
+
+Tabnine is the first AI coding assistant with native, one-click JIRA-to-code integration. Its Implementation Agent reads a JIRA ticket — including the description, acceptance criteria, and linked design documents — and generates code that meets those requirements directly in your IDE. A companion Validation Agent then reviews your written code against the ticket's acceptance criteria, flagging any gaps before you open a pull request. Tabnine is purpose-built for enterprise teams with strict security and compliance requirements, making it the leading choice for organizations that cannot use cloud-hosted AI services with external data retention.
+
+## Key Agents
+
+Tabnine ships a suite of specialized agents that map directly to the stages of the development lifecycle.
+
+**Jira Implementation Agent** is the core workflow integration. Open any JIRA issue inside the Tabnine sidebar in your IDE and click **Implement**. The agent parses the ticket, builds an implementation plan, and begins generating code across the relevant files in your project. It understands your existing codebase through local indexing, so the generated code follows your team's patterns, naming conventions, and architectural style rather than producing generic output.
+
+**Jira Validation Agent** acts as an automated pre-review step. After you finish writing or reviewing the generated code, run the Validation Agent against the originating JIRA ticket. It compares the implemented behavior to each acceptance criterion in the ticket and produces a structured report: criteria met, criteria partially met, and criteria not addressed. This reduces the number of review cycles needed before a PR can be approved.
+
+**Test Agent** generates unit and integration tests for any function, class, or module you select. It infers the testing framework your project uses (Jest, JUnit, pytest, RSpec, etc.) and generates tests that match your existing test style. You can also trigger it automatically after the Implementation Agent finishes a task.
+
+**Onboarding Agent** helps new team members ramp up faster. It answers questions about the codebase in natural language, explains architectural decisions, maps dependencies between services, and surfaces the relevant JIRA epics and Confluence docs for any area of the code. Point a new engineer at an unfamiliar service and they can ask the Onboarding Agent to explain it end-to-end.
+
+## JIRA Integration Setup
+
+<Steps>
+  <Step title="Install Tabnine in your IDE">
+    Tabnine supports IntelliJ IDEA, VS Code, PyCharm, WebStorm, GoLand, Rider, and most other JetBrains IDEs. Install the Tabnine plugin from your IDE's plugin marketplace. In VS Code, search for **Tabnine** in the Extensions panel. In IntelliJ IDEA, go to **Settings → Plugins → Marketplace** and search for **Tabnine**.
+  </Step>
+  <Step title="Sign in to your Tabnine Enterprise account">
+    After installation, the Tabnine sidebar prompts you to sign in. Use your Tabnine Enterprise credentials (email and password, or SSO if your organization has configured it). You must be on the **Enterprise** plan to access the JIRA integration and agent features.
+  </Step>
+  <Step title="Connect JIRA via Settings">
+    Open Tabnine settings in your IDE and navigate to **Integrations → JIRA**. Click **Authorize**. You will be prompted to enter your JIRA instance URL:
+
+    - **JIRA Cloud**: `https://your-org.atlassian.net`
+    - **JIRA Data Center**: `https://jira.your-company.com` (your self-hosted URL)
+
+    Complete the authorization flow. For Data Center, you will provide a personal API token generated from your JIRA profile page rather than going through OAuth.
+  </Step>
+  <Step title="Implement a ticket from the Tabnine sidebar">
+    With the integration active, open the Tabnine sidebar panel in your IDE. You will see a **JIRA** section listing your assigned tickets and recently viewed issues. Click any ticket to open its details, then click **Implement**. The Implementation Agent reads the ticket, proposes a plan in the sidebar, and begins generating code when you approve it.
+  </Step>
+</Steps>
+
+## Self-Hosted JIRA (Data Center)
+
+Tabnine is one of the few AI coding assistants that provides full JIRA Data Center support, making it the recommended choice for enterprise teams running self-hosted Atlassian infrastructure.
+
+To configure Data Center connectivity, enter your JIRA Data Center server URL and a personal API token in **Tabnine Settings → Integrations → JIRA**. Tabnine communicates with your Data Center instance directly from the developer's machine — no cloud relay is involved. This means the integration respects your network perimeter, works behind a VPN, and does not expose JIRA ticket content to any external service.
+
+The Implementation Agent and Validation Agent work identically against Data Center and Cloud instances. The only difference is the authorization method: Data Center uses API tokens, while Cloud uses OAuth 2.1.
+
+## Enterprise Security
+
+Tabnine is designed from the ground up for enterprise security and compliance requirements.
+
+**Zero data retention** means your source code and JIRA ticket content are never stored on Tabnine's servers. Code is processed in memory for the duration of the completion request and discarded immediately. This satisfies requirements in regulated industries (finance, healthcare, government) where code cannot leave organizational boundaries.
+
+**Private model deployment** allows enterprises to run the Tabnine model entirely within their own cloud account or on-premises infrastructure. Tabnine supports deployment on AWS, Azure, GCP, and air-gapped on-premises environments. In this configuration, no data ever leaves your infrastructure.
+
+**IP-safe training data** means the Tabnine model was trained exclusively on open-source code with permissive licenses. It does not generate code that reproduces licensed third-party code verbatim, reducing intellectual property risk for enterprise customers.
+
+Tabnine was named a **Gartner Magic Quadrant Visionary for AI Code Assistants (2026)**, recognizing its enterprise-grade security architecture and breadth of agent capabilities.
+
+<Note>
+  The JIRA Implementation Agent, Validation Agent, Test Agent, and Onboarding Agent are all **Tabnine Enterprise** features. They are not available on the free or Pro (individual) tiers. If you are evaluating Tabnine for your team, contact Tabnine sales for an enterprise trial that includes full agent access and JIRA Data Center connectivity.
+</Note>

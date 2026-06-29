@@ -1,0 +1,95 @@
+---
+title: "Markplane: Git-Native Markdown Task Management for AI"
+sidebarTitle: "Markplane"
+description: "Markplane stores tasks as markdown files in your repo, exposes them via MCP to any AI agent, and compresses your entire project state into ~1,000 tokens for LLM context."
+---
+
+Markplane (⭐ 174 stars, written in Rust and TypeScript) is a zero-infrastructure, AI-native project management tool that stores tasks as markdown files in your Git repository. No SaaS, no database, no separate service — just files you own and version control. Every task is a first-class citizen of your repo, reviewed in PRs, diffed in history, and queryable by any AI agent through the built-in MCP server.
+
+## Why Markplane
+
+- **Git-native storage**: Tasks live in `.context/tasks/` as Markdown files with YAML frontmatter — branch, diff, merge, and revert them like any other source file
+- **Full audit trail**: Git history gives you a complete record of every status change, priority shift, and assignee update, with the commit that made it
+- **AI-ready MCP server**: The built-in MCP server lets any compatible AI agent query, create, and update tasks in plain English — no custom API integration required
+- **Compact LLM context**: Markplane compresses your entire project state into approximately **1,000 tokens**, making it practical to include full project context in every LLM prompt without burning your context window
+- **Single binary**: Run `markplane init` and you're done — no Docker, no database, no cloud account
+
+## Getting Started
+
+<Steps>
+  <Step title="Install Markplane">
+    Install via Cargo or download the pre-built binary from the GitHub releases page:
+
+    ```bash
+    cargo install markplane
+    ```
+  </Step>
+  <Step title="Initialise in your repository">
+    Run this from your project root. Markplane creates a `.context/` directory and an initial `README.md` explaining the structure.
+
+    ```bash
+    markplane init
+    ```
+  </Step>
+  <Step title="Add your first task">
+    ```bash
+    markplane add "Implement login endpoint" --priority high
+    ```
+
+    Markplane writes a new markdown file to `.context/tasks/` and prints the generated task ID.
+  </Step>
+  <Step title="Start the MCP server">
+    ```bash
+    markplane serve
+    ```
+
+    The MCP server starts on `localhost:3747` by default. It exposes tools for listing, creating, updating, and querying tasks in natural language.
+  </Step>
+  <Step title="Register the MCP server in your IDE">
+    Add the Markplane MCP endpoint to your IDE or AI agent configuration. For Claude Code:
+
+    ```json .claude/mcp.json
+    {
+      "mcpServers": {
+        "markplane": {
+          "command": "markplane",
+          "args": ["serve", "--stdio"]
+        }
+      }
+    }
+    ```
+  </Step>
+</Steps>
+
+## Task Format
+
+Every task is a standalone markdown file with a YAML frontmatter block. You can edit tasks directly in your editor or through `markplane` CLI commands — both are valid workflows.
+
+```markdown .context/tasks/TASK-001.md
+---
+id: TASK-001
+title: Implement login endpoint
+status: in-progress
+priority: high
+assignee: alice
+created: 2025-01-15
+---
+
+## Description
+Implement the POST /auth/login endpoint returning a JWT token.
+
+## Acceptance Criteria
+- [ ] Validates email + password
+- [ ] Returns 401 on invalid credentials
+- [ ] Returns JWT on success
+```
+
+The frontmatter fields are the machine-readable layer — used by the MCP server for filtering and indexing. The markdown body is the human-readable layer — used by the AI agent for understanding intent and acceptance criteria.
+
+## Syncing with JIRA
+
+Markplane is local-first and works entirely offline. For teams that also use JIRA, the recommended pattern is to use Markplane for **LLM context during coding** — its compact token representation makes it ideal for injecting project state into every prompt — and sync completed tasks back to JIRA via the **Atlassian Rovo MCP server** at the end of a sprint. This gives you the speed and ownership benefits of local markdown during development without losing JIRA as your source of truth for stakeholder reporting.
+
+<Note>
+Markplane is ideal for **self-hosted environments** where a cloud task manager is not available or not desired. Because tasks are plain files in your repository, they work behind any firewall, require no outbound network access, and are subject to the same access controls as your source code.
+</Note>

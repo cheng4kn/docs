@@ -1,0 +1,95 @@
+---
+title: "Frequently Asked Questions: AI Task Engineering"
+sidebarTitle: "FAQ"
+description: "Answers to common questions about setting up AI coding agents, MCP servers, JIRA integrations, and the AI Task Engineering workflow for development teams."
+---
+
+This FAQ covers the most common questions teams encounter when adopting AI Task Engineering tools and integrating them with JIRA, Confluence, IntelliJ IDEA, and self-hosted Git.
+
+<AccordionGroup>
+  <Accordion title="Do these tools work with JIRA Data Center (self-hosted)?">
+    Yes, several tools support JIRA Data Center natively. **Tabnine Enterprise** integrates directly with DC instances and keeps all data on-premises. **JIRA GitLab Helper** also targets the self-hosted JIRA + GitLab CE combination specifically.
+
+    Note that **Rovo MCP** requires an Atlassian Cloud account — it does not connect to Data Center. If you are on DC, use the JIRA REST API directly with any MCP server, or choose Tabnine as your primary IDE integration.
+  </Accordion>
+
+  <Accordion title="Can I use Claude and Codex together?">
+    Yes. **Forge Orchestrator** is specifically designed for running Claude and Codex simultaneously on the same codebase. It uses file locking to prevent write conflicts — if Claude holds a lock on a file, Codex queues until the lock is released. A shared knowledge flywheel records decisions made by either agent so both stay consistent throughout the session.
+
+    See [Run Multiple AI Agents on the Same Codebase](/guides/multi-agent-workflow) for the full setup guide.
+  </Accordion>
+
+  <Accordion title="What is MCP and do I need to understand it?">
+    MCP (Model Context Protocol) is a standard protocol that lets AI agents securely access external tools and data sources — like JIRA tickets, Confluence pages, and Git repositories — without embedding credentials in the model or the prompt.
+
+    You do not need to understand the protocol internals to use it. In practice, you configure which MCP servers your IDE connects to (a short JSON file), and from that point on your agent can read from JIRA and Confluence automatically. See the [MCP Server Directory](/reference/mcp-servers) for configuration templates.
+  </Accordion>
+
+  <Accordion title="My team uses GitLab Community Edition. Which tools are compatible?">
+    Several tools work well with GitLab CE:
+
+    - **JIRA GitLab Helper** is purpose-built for this combination and handles MR-to-ticket linking, branch-based JIRA key detection, and status transitions.
+    - **Forge Orchestrator** supports any self-hosted Git provider, including GitLab CE.
+    - The **GitLab MCP server** (`npx @gitlab/mcp-server`) works with self-hosted instances — point it at your instance URL via the `GITLAB_URL` environment variable.
+
+    For CI-based auto-close, see [Auto-Close JIRA Tickets When MR Is Merged](/guides/mr-jira-close).
+  </Accordion>
+
+  <Accordion title="How do I prevent the AI agent from accidentally modifying the wrong files?">
+    Use **Forge Orchestrator's scope configuration** to restrict each agent to specific directories. In `forge-config.toml`, the `scope` array defines the file paths an agent is allowed to write to — any access outside that scope is blocked at the file-lock level.
+
+    Additionally, always review agent-proposed changes in the diff view before committing. Treat every AI-generated change as a pull request that requires your approval, not as a direct edit.
+  </Accordion>
+
+  <Accordion title="Will AI-generated code pass our code review?">
+    AI agents produce first drafts, not finished code. You should always review, test, and iterate before submitting for human code review.
+
+    That said, several tools specifically target code quality before the review stage:
+
+    - **Tabnine's Validation Agent** runs static analysis and security checks on generated code.
+    - The **Acendas Suite** includes an 8-agent PR review pipeline that checks for logic errors, security issues, and style violations automatically before your team sees the MR.
+
+    Use these tools to raise the quality floor, but do not skip human review.
+  </Accordion>
+
+  <Accordion title="Is our code sent to the cloud when using these tools?">
+    It depends on the tool:
+
+    - **Tabnine Enterprise** has a zero data retention policy — code is not stored or used for model training.
+    - **Claude Code** and **Codex** send code snippets to Anthropic and OpenAI respectively during generation. Review each vendor's data processing agreement before use.
+    - For maximum privacy, use locally-hosted models via **Ollama** combined with **Task Master AI** or **Continue.dev** — no code leaves your network.
+
+    Always confirm your vendor's DPA with your legal or security team before enabling these tools on proprietary codebases.
+  </Accordion>
+
+  <Accordion title="How do I find the JIRA transition ID for 'Done'?">
+    Run the following command against any issue in your JIRA project. The response lists all available workflow transitions and their IDs:
+
+    ```bash
+    curl -u email:token \
+      "https://jira.yourcompany.com/rest/api/2/issue/PROJ-1/transitions" \
+      | jq '.transitions[] | {id, name}'
+    ```
+
+    Find the entry where `name` is `"Done"` (or your workflow's equivalent) and use that `id` value in your CI/CD pipeline or GitLab integration settings. For more detail, see [Finding Your Transition ID](/guides/mr-jira-close#finding-your-transition-id).
+  </Accordion>
+
+  <Accordion title="Can I start with just one tool and add more later?">
+    Yes — and that is the recommended approach. Adding everything at once makes it hard to attribute value or diagnose issues.
+
+    Start with a single MCP integration:
+    - **Atlassian Rovo MCP** if you are on Atlassian Cloud
+    - **Tabnine Enterprise** if you are on JIRA Data Center
+
+    Once your IDE is reading JIRA and Confluence context reliably, add **JIRA GitLab Helper** for auto-close, then consider **Forge Orchestrator** or **CLEO** as your workflow matures.
+  </Accordion>
+
+  <Accordion title="What's the difference between Rovo Dev and Rovo MCP?">
+    These are two separate things that are often confused:
+
+    - **Rovo MCP** is the **integration layer** — it exposes your JIRA issues, Confluence pages, and Atlassian data to any MCP-compatible AI agent. Think of it as the data pipe.
+    - **Rovo Dev** is **Atlassian's own AI agent** — it consumes the Rovo MCP data and can autonomously go from a JIRA ticket description to an open pull request.
+
+    You can use Rovo MCP with Claude, GitHub Copilot, or any other MCP-compatible agent instead of Rovo Dev. If you prefer to bring your own agent (e.g. Claude Code), configure Rovo MCP as an MCP server in your IDE and skip Rovo Dev entirely.
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,103 @@
+---
+title: "End-to-End AI Dev Workflow: JIRA to Merged MR"
+sidebarTitle: "End-to-End Workflow"
+description: "A complete walkthrough of one development cycle using AI agents: from JIRA ticket creation through Confluence context, Claude code generation, MR, CI/CD, and auto-close."
+---
+
+This guide walks you through a full development cycle — from the moment a JIRA ticket is created to the moment it auto-closes when the MR is merged. Follow each step to see how AI agents accelerate the entire loop.
+
+<Steps>
+  <Step title="Create the JIRA Ticket">
+    A PM creates the ticket **PROJ-456: Add rate limiting to API gateway** with the following acceptance criteria:
+
+    - Maximum 100 requests per minute per user
+    - Return HTTP `429 Too Many Requests` when the limit is breached
+    - Log all violations with user ID, timestamp, and request path
+  </Step>
+
+  <Step title="Link Confluence Context">
+    Open PROJ-456 and add the following pages under **Confluence Pages**:
+
+    - The **API Gateway Design Doc** (architecture and current middleware chain)
+    - The **Rate Limiting ADR** (the team's accepted decision on algorithm and storage backend)
+
+    The AI agent will read both documents for implementation context before generating any code.
+  </Step>
+
+  <Step title="Open Your IDE">
+    Open **IntelliJ IDEA**. The MCP connection to JIRA and Confluence is already configured in your workspace — no manual setup is required at this point. Confirm the AI assistant panel is visible in the right sidebar.
+  </Step>
+
+  <Step title="Brief the Agent">
+    In the AI chat panel, type the following prompt:
+
+    ```
+    Implement PROJ-456. Read the acceptance criteria and the linked Confluence ADR before generating code.
+    ```
+
+    Be explicit about the ticket key and the instruction to read linked docs. This is what triggers the MCP fetch.
+  </Step>
+
+  <Step title="Agent Generates Implementation">
+    Claude reads PROJ-456 via the JIRA MCP connection, fetches the Rate Limiting ADR from Confluence, and uses both to generate the rate limiting middleware. The output typically includes:
+
+    - The middleware class with the token-bucket or sliding-window logic
+    - A `429` response handler
+    - A structured log entry for violations
+
+    Review the proposed changes in the diff view before accepting them.
+  </Step>
+
+  <Step title="Create a Branch and Commit">
+    Checkout a new branch named after the JIRA key:
+
+    ```bash
+    git checkout -b feature/PROJ-456-rate-limiting
+    ```
+
+    Stage your changes and commit with the JIRA key in the message:
+
+    ```bash
+    git commit -m "PROJ-456: add rate limiting middleware to API gateway"
+    ```
+
+    Including the JIRA key auto-links the commit to the ticket in both JIRA and your Git platform.
+  </Step>
+
+  <Step title="Open the MR">
+    Push the branch and open a Merge Request with the title:
+
+    ```
+    PROJ-456: Add rate limiting to API gateway
+    ```
+
+    The CI pipeline triggers automatically on MR creation and runs your full test suite.
+  </Step>
+
+  <Step title="CI/CD Runs">
+    Tests pass and reviewers approve the MR. On merge to `main`, the CI pipeline fires a JIRA status transition:
+
+    ```
+    PROJ-456 → Done
+    ```
+
+    No manual JIRA update is needed. See [Auto-Close JIRA Tickets When MR Is Merged](/guides/mr-jira-close) for setup instructions.
+  </Step>
+
+  <Step title="JIRA Auto-Closes">
+    PROJ-456 transitions to **Done**. Stakeholders receive the JIRA notification automatically. The full development loop — from ticket creation to closed status — is complete without any manual status management.
+  </Step>
+</Steps>
+
+## What Sped This Up
+
+Here is a quick breakdown of where AI agents saved time in this cycle:
+
+- **Agent read JIRA acceptance criteria automatically** — no copy-pasting the ticket into a chat window
+- **Agent fetched the Confluence ADR for context** — no tab-switching or manually summarising the design decision
+- **JIRA key in the commit message** — auto-links the commit to the ticket, creating a searchable history trail
+- **CI auto-close on merge** — eliminates the manual step of moving the JIRA card to Done after every MR
+
+<Tip>
+  Configure your IDE to auto-suggest the JIRA key based on the current Git branch name. In IntelliJ IDEA, the **Git Toolbox** plugin reads the branch name (e.g. `feature/PROJ-456-rate-limiting`) and pre-fills `PROJ-456` in the commit message template — so you never forget to include the key.
+</Tip>

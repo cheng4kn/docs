@@ -1,0 +1,116 @@
+---
+title: "Configure IntelliJ IDEA and VS Code for AI Agents"
+sidebarTitle: "IDE Setup"
+description: "Set up MCP servers and AI coding agents in IntelliJ IDEA, VS Code, and Cursor to enable JIRA-aware code generation with Claude and Codex in your IDE."
+---
+
+Your IDE is the central hub where AI agents read JIRA context, generate code, and create Git branches. Getting this hub configured correctly — with the right plugins, API keys, and MCP server connections — is the prerequisite for everything else in this workflow. This guide covers IntelliJ IDEA (the primary IDE for this team), VS Code, and Cursor.
+
+## IntelliJ IDEA Setup
+
+<Steps>
+  <Step title="Install an AI plugin">
+    IntelliJ IDEA 2024.1 and later include the **AI Assistant** plugin bundled by default. If you are on an earlier version, or if you want open-source LLM access, install the **Continue.dev** plugin from the JetBrains Marketplace (**Settings → Plugins → Marketplace**, search for "Continue").
+  </Step>
+  <Step title="Configure your LLM API key">
+    For Claude, go to **Settings → Tools → AI Assistant → Model** and select **Anthropic Claude**. Paste your Anthropic API key into the key field. For Codex (OpenAI), select the appropriate OpenAI model and enter your OpenAI API key. If you are using Continue.dev, add your provider and key in the Continue config file instead.
+  </Step>
+  <Step title="Install the MCP Plugin for IntelliJ">
+    Open the JetBrains Marketplace (**Settings → Plugins → Marketplace**) and search for **MCP Plugin for IntelliJ**. Install and restart when prompted. This plugin adds MCP server management to IntelliJ's settings.
+  </Step>
+  <Step title="Add MCP servers">
+    Go to **Settings → Tools → MCP** and add your server configuration. For the Atlassian Rovo server:
+
+    ```json
+    {
+      "servers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        }
+      }
+    }
+    ```
+
+    Add any additional servers (Task Master AI, Gitea MCP, etc.) as sibling entries under `"servers"`.
+  </Step>
+  <Step title="Restart and verify">
+    Restart IntelliJ IDEA to apply the MCP configuration. Open the AI chat panel (usually **View → Tool Windows → AI Assistant**) and ask a test question like `"List my open JIRA issues"`. A successful response confirms the MCP connection is active.
+  </Step>
+</Steps>
+
+## VS Code Setup
+
+<Steps>
+  <Step title="Install an AI extension">
+    Install one of the following extensions from the VS Code Marketplace depending on your LLM preference:
+
+    - **GitHub Copilot** — for OpenAI Codex and GPT-4o
+    - **Continue.dev** — for open-source or self-hosted LLMs, and for Claude
+    - **Claude Dev (Cline)** — for direct Claude integration with agentic file editing
+  </Step>
+  <Step title="Create the MCP configuration file">
+    Create a `.vscode/mcp.json` file in your workspace root. VS Code reads this file automatically when MCP support is enabled in your extension:
+
+    ```json .vscode/mcp.json
+    {
+      "servers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        },
+        "task-master": {
+          "command": "task-master",
+          "args": ["mcp"]
+        }
+      }
+    }
+    ```
+
+    Commit this file to your repository so all team members share the same MCP server configuration.
+  </Step>
+  <Step title="Reload and verify">
+    Reload the VS Code window (**Ctrl+Shift+P → Developer: Reload Window**). Open the Extensions panel and check that your MCP extension shows the configured servers as connected. If a server shows as disconnected, verify the URL and your network access to the MCP host.
+  </Step>
+</Steps>
+
+## Cursor Setup
+
+<Steps>
+  <Step title="Open MCP settings">
+    Open **Cursor Settings** (gear icon or **Ctrl+,**) and navigate to the **MCP** section. This panel lists all configured MCP servers and their connection status.
+  </Step>
+  <Step title="Add a new MCP server">
+    Click **Add new MCP server** and fill in the server name and URL using the Atlassian Rovo values. Cursor saves the entry to your user-level MCP config automatically.
+  </Step>
+  <Step title="Or edit the config file directly">
+    For bulk configuration or to share settings across machines, edit `~/.cursor/mcp.json` directly:
+
+    ```json ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        }
+      }
+    }
+    ```
+
+    Restart Cursor after saving the file to apply the changes.
+  </Step>
+</Steps>
+
+## Verifying the Setup
+
+Once your IDE and MCP servers are configured, run a quick end-to-end verification before starting development work:
+
+1. Open the AI chat panel in your IDE.
+2. Ask: `"List open issues assigned to me in PROJ"`
+3. If the agent returns a list of JIRA issues from your project, the MCP connection is working correctly.
+
+If the agent responds that it cannot access JIRA, check that your MCP server URL is correct, your Atlassian session is authenticated, and that your IDE has restarted since the config was saved.
+
+<Tip>
+  Stack multiple MCP servers together for the richest agent context. Connecting **JIRA** (tickets and acceptance criteria) + **Confluence** (ADRs and design docs) + **Task Master AI** (task decomposition) gives your agent everything it needs to go from a ticket number to a working implementation in a single conversation. Add all three as sibling entries in your `"servers"` config block.
+</Tip>

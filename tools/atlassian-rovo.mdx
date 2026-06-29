@@ -1,0 +1,107 @@
+---
+title: "Atlassian Rovo: AI Agents for JIRA and Confluence"
+sidebarTitle: "Atlassian Rovo"
+description: "Use Atlassian Rovo and the Rovo MCP Server to connect JIRA and Confluence to any LLM agent or IDE, powering AI-driven task planning and code generation."
+---
+
+Atlassian Rovo is the official AI platform for the Atlassian ecosystem. It exposes JIRA and Confluence data to any MCP-compatible agent or IDE via the Rovo MCP Server, making it the primary bridge between your project management layer and your AI-powered development tools. Whether you are using Cursor, VS Code, Claude Code, or a custom agent pipeline, Rovo turns every JIRA issue and Confluence page into actionable context for code generation.
+
+## What Rovo Does
+
+Rovo is not a single product but a suite of tightly integrated AI capabilities built on top of the Atlassian platform.
+
+**Rovo Dev** is the flagship autonomous agent. It accepts a JIRA issue as its starting point, generates a step-by-step implementation plan, writes the code across one or more files, and opens a linked pull request — all without leaving your IDE. Rovo Dev understands the full ticket context including acceptance criteria, linked issues, and Confluence design docs attached to the epic.
+
+**Atlassian Intelligence (AI)** is embedded directly into JIRA and Confluence. It provides natural-language work breakdown (splitting epics into child tickets automatically), inline summaries of long issue threads, natural-language JQL query generation, and smart automation rule suggestions. You do not need to leave JIRA to use it.
+
+**Rovo MCP Server** is the official hosted MCP (Model Context Protocol) endpoint for the Atlassian platform. It is available at `https://mcp.atlassian.com/v1/mcp` and exposes tools for reading and writing JIRA issues, searching Confluence, managing sprints, and querying the Teamwork Graph. Any MCP-compatible client — Cursor, VS Code, Claude Code, or a custom LLM agent — can connect to it with a single OAuth 2.1 authorization.
+
+**Teamwork Graph** is Atlassian's knowledge layer that links together people, goals, services, repositories, and work items across your organization. Rovo agents draw on the Teamwork Graph to provide contextually relevant answers, find related work, and surface the right Confluence documentation when writing code.
+
+## Setting Up Rovo MCP
+
+<Steps>
+  <Step title="Enable Rovo on your Atlassian Cloud plan">
+    Rovo is available on Atlassian Cloud Standard, Premium, and Enterprise plans. Sign in to [admin.atlassian.com](https://admin.atlassian.com), navigate to your organization, and confirm that Rovo is enabled under **Products → Rovo**. If you are on a Free plan, you will need to upgrade before proceeding.
+  </Step>
+  <Step title="Authorize the MCP server">
+    Navigate to [https://mcp.atlassian.com](https://mcp.atlassian.com) in your browser. Click **Authorize** and complete the OAuth 2.1 flow with your Atlassian account credentials. You will be asked to grant the MCP server read and write access to the JIRA projects and Confluence spaces your agent needs.
+  </Step>
+  <Step title="Copy the MCP server URL">
+    After authorization, the portal displays your personal MCP server URL. The base endpoint is always `https://mcp.atlassian.com/v1/mcp`. Copy this URL — you will add it to your IDE configuration in the next step.
+  </Step>
+  <Step title="Add the server to your IDE configuration">
+    Add the Rovo MCP server to your IDE's MCP configuration file. The examples below cover VS Code and Cursor.
+
+    **VS Code** — create or edit `.vscode/mcp.json` in your project root:
+
+    ```json .vscode/mcp.json
+    {
+      "servers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        }
+      }
+    }
+    ```
+
+    **Cursor** — add the server to `~/.cursor/mcp.json`:
+
+    ```json ~/.cursor/mcp.json
+    {
+      "mcpServers": {
+        "atlassian-rovo": {
+          "url": "https://mcp.atlassian.com/v1/mcp",
+          "type": "http"
+        }
+      }
+    }
+    ```
+
+    Restart your IDE after saving the configuration. The Rovo tools (search JIRA, get issue, create issue, search Confluence, etc.) will appear in your agent's tool list automatically.
+  </Step>
+</Steps>
+
+## Using Rovo in IntelliJ IDEA
+
+IntelliJ IDEA users can access Rovo through the dedicated Atlassian plugin rather than the MCP configuration file.
+
+<Steps>
+  <Step title="Install the Atlassian plugin">
+    Open IntelliJ IDEA and navigate to **Settings → Plugins → Marketplace**. Search for **Atlassian** and install the official Atlassian plugin. Restart the IDE when prompted.
+  </Step>
+  <Step title="Connect to your Atlassian account">
+    After restart, open the **Atlassian** tool window from the right sidebar. Click **Log in to Atlassian** and complete the OAuth flow in your browser. Select the JIRA projects and Confluence spaces you want to surface in the IDE.
+  </Step>
+  <Step title="Connect to the Rovo MCP server">
+    In the Atlassian plugin settings (**Settings → Tools → Atlassian**), enable **Rovo MCP Integration** and paste the MCP server URL (`https://mcp.atlassian.com/v1/mcp`). Save and apply.
+  </Step>
+  <Step title="Reference JIRA issues in AI prompts">
+    You can now reference JIRA issues directly in your AI Assistant prompts. For example, in the AI Assistant chat panel type: `"Explain the acceptance criteria for PROJ-123"` or `"Implement the changes described in PROJ-456"`. The plugin fetches the live issue data and passes it as context to the model.
+  </Step>
+</Steps>
+
+## Rovo Dev Workflow
+
+Rovo Dev models the full JIRA → code → PR lifecycle as an autonomous agent loop. Here is how a typical workflow runs.
+
+When you invoke Rovo Dev on a JIRA issue, the agent first fetches the complete issue — summary, description, acceptance criteria, linked issues, and any attached Confluence design documents. It then generates an **implementation plan**: a numbered list of files to create or modify, the logic changes required, and any new tests needed. You review this plan in the IDE panel and can edit it before approving.
+
+Once you approve the plan, Rovo Dev begins writing code. It works file by file, running each change through your project's linter and type-checker if configured. When all files are complete, it commits the changes to a new branch named after the JIRA issue key and opens a pull request with the issue linked in the PR description.
+
+To trigger Rovo Dev from the IDE AI chat, use a prompt like:
+
+```text
+Implement the changes described in PROJ-456
+```
+
+Rovo Dev will resolve `PROJ-456` via the MCP server, retrieve the full issue context, and begin the plan–implement–PR loop automatically.
+
+## Availability
+
+Rovo is available on **Atlassian Cloud Standard, Premium, and Enterprise** plans. The Rovo MCP Server, Rovo Dev, and Atlassian Intelligence features are all cloud-only capabilities tied to your Atlassian Cloud organization.
+
+<Note>
+  The Rovo MCP Server requires Atlassian Cloud. If your team uses Atlassian Data Center (self-hosted JIRA or Confluence), the cloud MCP endpoint is not available to you. In that case, consider using **Tabnine**, which provides native JIRA Data Center integration with its Implementation and Validation Agents, or configure direct API access to your Data Center instance from your IDE using a personal API token.
+</Note>

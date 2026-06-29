@@ -1,0 +1,102 @@
+---
+title: "JIRA GitLab Helper: AI-Powered MR Creation from Tickets"
+sidebarTitle: "JIRA GitLab Helper"
+description: "A VS Code extension that fetches JIRA issues, runs AI analysis with Confluence context, generates code, and auto-creates GitLab Merge Requests with JIRA key linking."
+---
+
+JIRA GitLab Helper is a VS Code extension that connects your JIRA tickets, GitLab repository, and optional Confluence docs into a single AI-powered workflow — from ticket analysis to auto-created MR, all without leaving your editor. It handles the tedious handoffs automatically: fetch the ticket, analyse the requirements, generate the implementation, open the MR, and link everything back to JIRA in one continuous flow.
+
+## Features
+
+- **JIRA issue fetching**: Pull bugs and feature tickets directly into VS Code by issue key — no browser tab switching
+- **AI requirement analysis**: Runs decomposition analysis for feature tickets and root-cause analysis for bugs, producing a structured implementation plan before any code is written
+- **Confluence enrichment**: Optionally fetches linked Confluence pages to give the AI additional architectural context during analysis
+- **Auto MR creation**: Creates GitLab Merge Requests with the JIRA key automatically included in both the MR title and description, keeping your traceability chain intact
+- **Configurable AI models**: Choose the model used for code generation and review — swap between `claude-opus-4`, `gpt-4o`, or any compatible endpoint
+
+## Setup
+
+<Steps>
+  <Step title="Install the extension">
+    Search for **"JIRA GitLab Helper"** in the VS Code Marketplace and click **Install**, or run:
+
+    ```bash
+    code --install-extension jira-gitlab-helper
+    ```
+  </Step>
+  <Step title="Open the extension settings">
+    Go to **File → Preferences → Settings** (or `Cmd+,` / `Ctrl+,`) and search for **JIRA GitLab Helper** to reveal all configuration options.
+  </Step>
+  <Step title="Configure JIRA credentials">
+    Set the following values in your VS Code settings (user or workspace scope):
+
+    ```json settings.json
+    {
+      "jiraGitlabHelper.jiraUrl": "https://yourorg.atlassian.net",
+      "jiraGitlabHelper.jiraEmail": "you@yourorg.com",
+      "jiraGitlabHelper.jiraToken": "your-jira-api-token"
+    }
+    ```
+  </Step>
+  <Step title="Configure GitLab credentials">
+    ```json settings.json
+    {
+      "jiraGitlabHelper.gitlabUrl": "https://gitlab.com",
+      "jiraGitlabHelper.gitlabToken": "your-gitlab-personal-access-token"
+    }
+    ```
+  </Step>
+  <Step title="(Optional) Configure Confluence">
+    ```json settings.json
+    {
+      "jiraGitlabHelper.confluenceUrl": "https://yourorg.atlassian.net/wiki",
+      "jiraGitlabHelper.confluenceToken": "your-confluence-api-token"
+    }
+    ```
+  </Step>
+  <Step title="Set your AI model">
+    ```json settings.json
+    {
+      "jiraGitlabHelper.aiModel": "claude-opus-4"
+    }
+    ```
+
+    Any model identifier supported by your configured AI provider works here. Use `gpt-4o` for OpenAI, `claude-opus-4` for Anthropic, or a custom endpoint URL for self-hosted models.
+  </Step>
+</Steps>
+
+## Using the Extension
+
+<Steps>
+  <Step title="Open the Command Palette">
+    Press `Ctrl+Shift+P` (Windows/Linux) or `Cmd+Shift+P` (macOS) to open the VS Code Command Palette.
+  </Step>
+  <Step title="Fetch the JIRA issue">
+    Run **`JIRA: Fetch Issue`** and enter the issue key (e.g., `PROJ-123`). The extension pulls the issue title, description, acceptance criteria, and any linked Confluence pages.
+  </Step>
+  <Step title="Review the AI analysis">
+    The extension opens a side panel showing the AI-generated requirement analysis: a breakdown of sub-tasks for features, or a root-cause hypothesis and fix strategy for bugs. Review and edit it before proceeding.
+  </Step>
+  <Step title="Generate the implementation">
+    Approve the analysis to trigger code generation. The AI writes the implementation into your workspace according to the plan, respecting your existing project structure.
+  </Step>
+  <Step title="Create the Merge Request">
+    Run **`GitLab: Create MR`** from the Command Palette. The extension creates a GitLab MR with `PROJ-123` in the title, a description that references the ticket, and the current branch as the source. The JIRA issue is updated with the MR URL automatically.
+  </Step>
+</Steps>
+
+## Self-Hosted GitLab
+
+JIRA GitLab Helper works with GitLab Community Edition and Enterprise Edition. To point it at your self-hosted instance, set `gitlabUrl` to your instance's base URL:
+
+```json settings.json
+{
+  "jiraGitlabHelper.gitlabUrl": "https://gitlab.yourcompany.com"
+}
+```
+
+All other configuration is identical to the cloud setup. The extension uses GitLab's standard REST API, so any version of GitLab CE that supports personal access tokens is compatible.
+
+<Tip>
+JIRA GitLab Helper is the best choice for teams running **GitLab CE (Community Edition)** on self-hosted infrastructure. It requires no additional services — just VS Code, your credentials, and an AI model API key. For teams on Bitbucket, see the [Acendas Atlassian Suite](/tools/acendas-suite) instead.
+</Tip>

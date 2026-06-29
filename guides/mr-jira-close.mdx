@@ -1,0 +1,150 @@
+---
+title: "Auto-Close JIRA Tickets When MR Is Merged"
+sidebarTitle: "MR → JIRA Close"
+description: "Configure your CI/CD pipeline or Git platform to automatically transition JIRA tickets to Done when a Merge Request containing the JIRA key is merged to main."
+---
+
+Closing JIRA tickets manually after merging an MR is error-prone and tedious. This guide shows you three ways to auto-close JIRA tickets when an MR is merged — from native platform integrations to CI scripts — tailored for self-hosted Git.
+
+## Method 1: GitLab CE Smart Commits
+
+GitLab's built-in JIRA integration supports Smart Commits, which parse your commit messages and call the JIRA REST API on merge.
+
+<Steps>
+  <Step title="Open the JIRA Integration Settings">
+    In your GitLab project, go to **Settings → Integrations → JIRA**.
+  </Step>
+
+  <Step title="Enter Your JIRA Credentials">
+    Fill in:
+    - **JIRA URL** — e.g. `https://jira.yourcompany.com`
+    - **Email** — the service account email
+    - **API token** — generated in your Atlassian account settings
+  </Step>
+
+  <Step title="Set the Transition ID">
+    Enter the **Transition ID** for the "Done" state in your JIRA workflow. The ID is typically `31`, but yours may differ. See [Finding Your Transition ID](#finding-your-transition-id) below.
+  </Step>
+
+  <Step title="Enable Branch Merge Transitions">
+    Toggle **"Transition JIRA issues when branches are merged"** to enabled, then save.
+  </Step>
+
+  <Step title="Add the Smart Commit Keyword to Your Commit">
+    Include the `#done` keyword in your commit message alongside the JIRA key:
+
+    ```
+    PROJ-123 #done implement rate limiting
+    ```
+
+    The JIRA key must appear before the `#done` keyword.
+  </Step>
+
+  <Step title="Verify the Transition">
+    After the MR is merged, GitLab calls the JIRA REST API with the configured transition ID. PROJ-123 moves to **Done** automatically. You can confirm in the JIRA issue's activity log.
+  </Step>
+</Steps>
+
+## Method 2: CI/CD Pipeline Script
+
+Use this approach for Gitea, or when you want full control over the transition logic regardless of your Git platform's native integration.
+
+Add the following job to your pipeline configuration. It fires only on merges to `main`, extracts the JIRA key from the commit message, and calls the JIRA transitions API:
+
+```yaml .gitlab-ci.yml
+close-jira:
+  stage: post-deploy
+  only:
+    - main
+  script:
+    - |
+      # Extract JIRA key from last commit message
+      JIRA_KEY=$(git log -1 --pretty=%B | grep -oE '[A-Z]+-[0-9]+' | head -1)
+      if [ -z "$JIRA_KEY" ]; then
+        echo "No JIRA key found in commit, skipping"
+        exit 0
+      fi
+      echo "Closing JIRA ticket: $JIRA_KEY"
+      curl -s -X POST \
+        -u "${JIRA_USER}:${JIRA_TOKEN}" \
+        -H "Content-Type: application/json" \
+        -d '{"transition":{"id":"31"}}' \
+        "${JIRA_URL}/rest/api/2/issue/${JIRA_KEY}/transitions"
+```
+
+Store `JIRA_USER`, `JIRA_TOKEN`, and `JIRA_URL` as masked CI/CD variables — see [Setting CI/CD Secrets](#setting-cicd-secrets) below.
+
+## Method 3: Gitea Actions
+
+For teams running **Gitea Community Edition**, use a Gitea Actions workflow. The structure mirrors GitHub Actions and supports the same `secrets` context.
+
+```yaml .gitea/workflows/close-jira.yml
+name: Close JIRA on merge
+on:
+  push:
+    branches: [main]
+jobs:
+  close-jira:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 5
+      - name: Close JIRA ticket
+        run: |
+          JIRA_KEY=$(git log -1 --pretty=%B | grep -oE '[A-Z]+-[0-9]+' | head -1)
+          [ -z "$JIRA_KEY" ] && exit 0
+          curl -s -X POST \
+            -u "${JIRA_USER}:${JIRA_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -d '{"transition":{"id":"31"}}' \
+            "${JIRA_URL}/rest/api/2/issue/${JIRA_KEY}/transitions"
+        env:
+          JIRA_USER: ${{ secrets.JIRA_USER }}
+          JIRA_TOKEN: ${{ secrets.JIRA_TOKEN }}
+          JIRA_URL: ${{ secrets.JIRA_URL }}
+```
+
+Place this file at `.gitea/workflows/close-jira.yml` in your repo root. Gitea picks it up automatically when Actions is enabled for the repository.
+
+## Finding Your Transition ID
+
+The transition ID for "Done" varies by JIRA project workflow. Retrieve the list of available transitions and their IDs for any issue in your project:
+
+```bash
+curl -u user@company.com:TOKEN \
+  "https://jira.yourcompany.com/rest/api/2/issue/PROJ-1/transitions" \
+  | jq '.transitions[] | {id, name}'
+```
+
+The output will look like:
+
+```json
+{ "id": "11", "name": "To Do" }
+{ "id": "21", "name": "In Progress" }
+{ "id": "31", "name": "Done" }
+```
+
+Use the `id` value for "Done" in your pipeline script or GitLab integration settings.
+
+## Setting CI/CD Secrets
+
+Never put credentials directly in pipeline YAML files. Add the following as **masked secrets** in your CI/CD platform's secret store:
+
+| Variable | Description | Example Value |
+|----------|-------------|---------------|
+| `JIRA_USER` | Service account email | `ci-bot@yourcompany.com` |
+| `JIRA_TOKEN` | Atlassian API token | `ATATT3x...` |
+| `JIRA_URL` | Base URL of your JIRA instance | `https://jira.yourcompany.com` |
+
+In **GitLab**, set these at **Settings → CI/CD → Variables** and check **Masked**. In **Gitea**, set them at **Settings → Secrets** for the repository or organisation.
+
+<Tip>
+  You can post a comment to JIRA at the same time you close the ticket by adding a `#comment` directive to your commit message:
+
+  ```
+  PROJ-123 #done #comment deployed to staging — rate limiting active
+  ```
+
+  GitLab Smart Commits will post the text after `#comment` as a JIRA comment and transition the ticket in a single API call. This is useful for leaving a deployment note visible directly on the ticket.
+</Tip>
