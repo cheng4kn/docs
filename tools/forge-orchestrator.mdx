@@ -1,7 +1,7 @@
 ---
 title: "Forge Orchestrator: Multi-AI Agent Code Collaboration"
 sidebarTitle: "Forge Orchestrator"
-description: "Forge Orchestrator runs Claude Code, Codex CLI, and Gemini CLI on shared repos simultaneously, using file locking to prevent conflicts and a knowledge flywheel to capture decisions."
+description: "Forge Orchestrator runs Claude Code, Codex CLI, and Gemini CLI on shared repos simultaneously, with file locking and a shared knowledge flywheel."
 ---
 
 Forge Orchestrator (⭐ 128 stars, written in Rust) solves the multi-agent conflict problem: it lets Claude Code, OpenAI Codex CLI, and Gemini CLI work on the same codebase simultaneously without overwriting each other's work, via file locking and a shared knowledge flywheel. Ship the single 4.7 MB binary, point it at your repo, and multiple AI agents coordinate automatically while Forge captures every cross-agent decision for future sessions.

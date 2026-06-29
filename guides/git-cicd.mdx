@@ -1,5 +1,5 @@
 ---
-title: "Self-Hosted Git and CI/CD for AI Workflows"
+title: "Self-Hosted Git and CI/CD Integration for AI Workflows"
 sidebarTitle: "Git & CI/CD"
 description: "Configure self-hosted Git (Gitea, GitLab CE) and CI/CD pipelines to work with AI coding agents, including automated JIRA ticket transitions on merge."
 ---
@@ -54,13 +54,13 @@ on:
     branches: [main]
 jobs:
   close-ticket:
-    if: github.event.pull_request.merged == true
+    if: ${{ gitea.event.pull_request.merged == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Extract JIRA key
         run: |
-          JIRA_KEY=$(echo "${{ github.event.pull_request.title }}" | grep -oE '[A-Z]+-[0-9]+')
-          echo "JIRA_KEY=$JIRA_KEY" >> $GITHUB_ENV
+          JIRA_KEY=$(echo "${{ gitea.event.pull_request.title }}" | grep -oE '[A-Z]+-[0-9]+')
+          echo "JIRA_KEY=$JIRA_KEY" >> $GITEA_ENV
       - name: Transition to Done
         run: |
           curl -X POST -u "$JIRA_USER:$JIRA_TOKEN" \
@@ -99,7 +99,7 @@ jobs:
     steps:
       - name: Check for JIRA key in title
         run: |
-          if ! echo "${{ github.event.pull_request.title }}" | grep -qE '^[A-Z]+-[0-9]+:'; then
+          if ! echo "${{ gitea.event.pull_request.title }}" | grep -qE '^[A-Z]+-[0-9]+:'; then
             echo "MR title must start with a JIRA issue key, e.g. PROJ-123: description"
             exit 1
           fi

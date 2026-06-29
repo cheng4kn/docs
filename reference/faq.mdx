@@ -1,5 +1,5 @@
 ---
-title: "Frequently Asked Questions: AI Task Engineering"
+title: "FAQ: AI Task Engineering Tools, MCP, and JIRA Workflows"
 sidebarTitle: "FAQ"
 description: "Answers to common questions about setting up AI coding agents, MCP servers, JIRA integrations, and the AI Task Engineering workflow for development teams."
 ---
@@ -72,6 +72,20 @@ This FAQ covers the most common questions teams encounter when adopting AI Task 
     ```
 
     Find the entry where `name` is `"Done"` (or your workflow's equivalent) and use that `id` value in your CI/CD pipeline or GitLab integration settings. For more detail, see [Finding Your Transition ID](/guides/mr-jira-close#finding-your-transition-id).
+  </Accordion>
+
+  <Accordion title="What are /jira-task slash commands and how do I use them?">
+    The **jira-claude-code-integration** package adds `/jira-task` slash commands directly inside JIRA tickets. After you run `npx jira-claude-code-integration` to start the MCP bridge, you can open any JIRA ticket and type a command such as:
+
+    ```
+    /jira-task implement
+    /jira-task write-tests
+    /jira-task review
+    ```
+
+    Each command sends the full ticket context — title, description, acceptance criteria, and linked Confluence pages — to Claude Code, which returns a branch, a set of commits, and an MR draft. This is useful for product managers or tech leads who want to trigger implementation directly from the JIRA interface without switching to an IDE.
+
+    Pair it with **JIRA GitLab Helper** to handle the MR-to-ticket linking and auto-close side of the workflow automatically.
   </Accordion>
 
   <Accordion title="Can I start with just one tool and add more later?">

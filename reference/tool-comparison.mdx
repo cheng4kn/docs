@@ -1,7 +1,7 @@
 ---
-title: "AI Task Engineering Tool Comparison Matrix"
+title: "AI Task Engineering Tool Comparison: Full Feature Matrix"
 sidebarTitle: "Tool Comparison"
-description: "Compare AI Task Engineering tools by JIRA support, Confluence support, IDE compatibility, LLM support, Git integration, and open-source availability."
+description: "Compare AI Task Engineering tools by JIRA support, Confluence support, IDE compatibility, LLM backend, self-hosted Git support, and open-source status."
 ---
 
 Use this reference to choose the right combination of tools for your workflow. The comparison covers the 10 most relevant AI Task Engineering tools for the JIRA → Confluence → IDE/LLM → Git → CI/CD lifecycle.
@@ -15,13 +15,17 @@ Use this reference to choose the right combination of tools for your workflow. T
 | Tabnine Enterprise | ✅ DC + Cloud | ⚠️ Indirect | ✅ Native | ⚠️ | ⚠️ | ✅ | ❌ |
 | Task Master AI | ⚠️ via MCP | ⚠️ via MCP | ✅ via MCP | ✅ | ✅ | ✅ | ✅ |
 | Forge Orchestrator | ⚠️ via MCP | ⚠️ via MCP | ✅ | ✅ | ✅ | ✅ | ✅ |
-| Acendas Suite | ✅ | ✅ | ✅ via MCP | ✅ | ⚠️ | ⚠️ Bitbucket | ✅ |
+| Acendas Suite | ✅ | ✅ | ✅ via MCP | ✅ | ⚠️ | ✅ GitLab / Gitea | ✅ |
 | CLEO | ⚠️ via MCP | ⚠️ via MCP | ✅ | ✅ | ✅ | ✅ | ✅ |
 | JIRA GitLab Helper | ✅ | ✅ | ✅ VS Code | ✅ | ✅ | ✅ GitLab CE | ✅ |
 | Markplane | ⚠️ Local-first | ⚠️ | ✅ via MCP | ✅ | ✅ | ✅ | ✅ |
 | Fenix | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ |
 
 > ✅ Full support &nbsp;|&nbsp; ⚠️ Partial / via adapter &nbsp;|&nbsp; ❌ Not supported
+
+<Note>
+  **Atlassian Rovo MCP** requires an Atlassian Cloud account and does not connect to JIRA Data Center. If your team runs JIRA Data Center on-premises, use **Tabnine Enterprise** (which natively supports DC) or the direct JIRA REST API via a community MCP server.
+</Note>
 
 ## Recommended Stacks
 
@@ -39,17 +43,17 @@ Choose the stack that matches your team's infrastructure and workflow.
   <Accordion title="Self-hosted JIRA + GitLab CE">
     Best for teams running JIRA Data Center and GitLab Community Edition on-premises:
 
-    - **Tabnine Enterprise** — Data Center support, stays on-prem
-    - **JIRA GitLab Helper** — purpose-built for the JIRA + GitLab CE combination
-    - **Forge Orchestrator** — works with any self-hosted Git provider
+    - **Tabnine Enterprise** — JIRA Data Center support, keeps all data on-prem
+    - **JIRA GitLab Helper** — purpose-built for the JIRA + GitLab CE combination; handles MR linking, branch detection, and status transitions out of the box
+    - **Forge Orchestrator** — works with any self-hosted Git provider, including GitLab CE and Gitea
   </Accordion>
 
   <Accordion title="Open-source / Indie Dev (Cursor / Claude)">
     Best for solo developers or small teams using Cursor or Claude Code with open tooling:
 
     - **Task Master AI** — file-based task trees, fully open source, MCP-native
-    - **Rovo MCP** — connects to Atlassian Cloud if you use it; otherwise use GitLab MCP
-    - **Markplane** — keeps tasks in Markdown inside the repo, no external services
+    - **Rovo MCP** — connects to Atlassian Cloud if you use it; otherwise use the GitLab MCP server for self-hosted Git context
+    - **Markplane** — keeps tasks in Markdown inside the repo, no external services needed
   </Accordion>
 
   <Accordion title="Multi-agent Power Users">
@@ -57,16 +61,17 @@ Choose the stack that matches your team's infrastructure and workflow.
 
     - **Forge Orchestrator** — file locking, knowledge flywheel, multi-agent TUI
     - **CLEO** — persistent agent memory across sessions
-    - **Atlassian MCP** — provides both agents shared access to the same JIRA + Confluence data
+    - **Atlassian Rovo MCP** — provides both agents shared access to the same JIRA + Confluence data
   </Accordion>
 
-  <Accordion title="This Team (JIRA + Confluence + IDEA + Self-hosted Git)">
-    The recommended stack for the KN Group workflow:
+  <Accordion title="This Team: JIRA + Confluence + IDEA + Self-hosted Git">
+    The recommended stack for teams using IntelliJ IDEA, JIRA (Data Center or Cloud), Confluence, and a self-hosted Git platform (GitLab CE or Gitea):
 
-    - **Rovo MCP** (Atlassian Cloud) or **Tabnine Enterprise** (Data Center) — JIRA + Confluence context in the IDE
-    - **JIRA GitLab Helper** — MR-to-ticket linking and auto-close for self-hosted GitLab CE
-    - **Forge Orchestrator** — multi-agent parallelism when working on large epics
-    - **CLEO** — persistent memory so agents retain decisions across sessions
+    - **Tabnine Enterprise** — JIRA Data Center support, IntelliJ IDEA native plugin, zero data retention; or **Rovo MCP** if your JIRA tenant is on Atlassian Cloud
+    - **JIRA GitLab Helper** — MR-to-ticket linking, branch-based JIRA key detection, and auto-close for GitLab CE
+    - **Forge Orchestrator** — multi-agent parallelism when working on large epics (`forge run` / `forge ship`)
+    - **CLEO** — persistent memory so agents retain design decisions across sessions and IDE restarts
+    - **Acendas Suite** — 179-tool MCP server for deep Atlassian automation when you need bulk operations across JIRA and Confluence
   </Accordion>
 </AccordionGroup>
 
@@ -88,3 +93,9 @@ Work through these questions in order to narrow your tool selection:
 
 5. **Need multi-agent parallelism on large epics?**
    → Yes: Add **Forge Orchestrator** — it manages file locking, agent scopes, and produces a single reviewed MR from multiple agents' work.
+
+## JIRA Slash Command Integrations
+
+Some tools extend JIRA's own interface with slash commands rather than operating as IDE plugins or MCP servers.
+
+**jira-claude-code-integration** adds `/jira-task` commands directly inside JIRA tickets. Once installed, you can open any ticket and run `/jira-task implement` or `/jira-task write-tests` to send the ticket context to Claude Code and receive a branch, commits, and an MR draft without leaving the JIRA interface. This is useful for PMs or tech leads who want to trigger implementation from JIRA without switching to the IDE. See [JIRA GitLab Helper](/tools/jira-gitlab-helper) for the complementary MR-linking side of this workflow.

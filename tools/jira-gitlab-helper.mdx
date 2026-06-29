@@ -1,7 +1,7 @@
 ---
 title: "JIRA GitLab Helper: AI-Powered MR Creation from Tickets"
 sidebarTitle: "JIRA GitLab Helper"
-description: "A VS Code extension that fetches JIRA issues, runs AI analysis with Confluence context, generates code, and auto-creates GitLab Merge Requests with JIRA key linking."
+description: "VS Code extension that fetches JIRA issues, runs AI requirement analysis with Confluence context, and auto-creates GitLab MRs with full JIRA key linking."
 ---
 
 JIRA GitLab Helper is a VS Code extension that connects your JIRA tickets, GitLab repository, and optional Confluence docs into a single AI-powered workflow — from ticket analysis to auto-created MR, all without leaving your editor. It handles the tedious handoffs automatically: fetch the ticket, analyse the requirements, generate the implementation, open the MR, and link everything back to JIRA in one continuous flow.
@@ -39,9 +39,11 @@ JIRA GitLab Helper is a VS Code extension that connects your JIRA tickets, GitLa
     ```
   </Step>
   <Step title="Configure GitLab credentials">
+    Set `gitlabUrl` to your self-hosted GitLab CE instance's base URL. If you are on GitLab.com, use `https://gitlab.com` instead.
+
     ```json settings.json
     {
-      "jiraGitlabHelper.gitlabUrl": "https://gitlab.com",
+      "jiraGitlabHelper.gitlabUrl": "https://gitlab.yourcompany.com",
       "jiraGitlabHelper.gitlabToken": "your-gitlab-personal-access-token"
     }
     ```

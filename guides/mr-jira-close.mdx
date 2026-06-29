@@ -1,7 +1,7 @@
 ---
-title: "Auto-Close JIRA Tickets When MR Is Merged"
+title: "Auto-Close JIRA Tickets on MR Merge: GitLab CE and Gitea"
 sidebarTitle: "MR → JIRA Close"
-description: "Configure your CI/CD pipeline or Git platform to automatically transition JIRA tickets to Done when a Merge Request containing the JIRA key is merged to main."
+description: "Configure GitLab CE Smart Commits, a CI pipeline script, or Gitea Actions to close JIRA tickets automatically each time an MR is merged to the main branch."
 ---
 
 Closing JIRA tickets manually after merging an MR is error-prone and tedious. This guide shows you three ways to auto-close JIRA tickets when an MR is merged — from native platform integrations to CI scripts — tailored for self-hosted Git.
@@ -47,30 +47,34 @@ GitLab's built-in JIRA integration supports Smart Commits, which parse your comm
 
 ## Method 2: CI/CD Pipeline Script
 
-Use this approach for Gitea, or when you want full control over the transition logic regardless of your Git platform's native integration.
+Use this approach for GitLab CE when you want full control over the transition logic, or to support multiple JIRA keys in a single merge commit.
 
 Add the following job to your pipeline configuration. It fires only on merges to `main`, extracts the JIRA key from the commit message, and calls the JIRA transitions API:
 
-```yaml .gitlab-ci.yml
+```yaml
+# .gitlab-ci.yml
 close-jira:
   stage: post-deploy
-  only:
-    - main
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
   script:
     - |
-      # Extract JIRA key from last commit message
       JIRA_KEY=$(git log -1 --pretty=%B | grep -oE '[A-Z]+-[0-9]+' | head -1)
       if [ -z "$JIRA_KEY" ]; then
         echo "No JIRA key found in commit, skipping"
         exit 0
       fi
       echo "Closing JIRA ticket: $JIRA_KEY"
-      curl -s -X POST \
+      curl -s -f -X POST \
         -u "${JIRA_USER}:${JIRA_TOKEN}" \
         -H "Content-Type: application/json" \
         -d '{"transition":{"id":"31"}}' \
         "${JIRA_URL}/rest/api/2/issue/${JIRA_KEY}/transitions"
 ```
+
+<Note>
+  The `rules:` block above is the modern GitLab CI syntax. If your pipeline uses the legacy `only:` keyword, replace the `rules:` block with `only: [main]`. The `curl -f` flag causes the job to fail if the JIRA API returns a non-2xx status, so transition errors surface in your pipeline log rather than silently passing.
+</Note>
 
 Store `JIRA_USER`, `JIRA_TOKEN`, and `JIRA_URL` as masked CI/CD variables — see [Setting CI/CD Secrets](#setting-cicd-secrets) below.
 
@@ -78,7 +82,8 @@ Store `JIRA_USER`, `JIRA_TOKEN`, and `JIRA_URL` as masked CI/CD variables — se
 
 For teams running **Gitea Community Edition**, use a Gitea Actions workflow. The structure mirrors GitHub Actions and supports the same `secrets` context.
 
-```yaml .gitea/workflows/close-jira.yml
+```yaml
+# .gitea/workflows/close-jira.yml
 name: Close JIRA on merge
 on:
   push:
@@ -94,7 +99,7 @@ jobs:
         run: |
           JIRA_KEY=$(git log -1 --pretty=%B | grep -oE '[A-Z]+-[0-9]+' | head -1)
           [ -z "$JIRA_KEY" ] && exit 0
-          curl -s -X POST \
+          curl -s -f -X POST \
             -u "${JIRA_USER}:${JIRA_TOKEN}" \
             -H "Content-Type: application/json" \
             -d '{"transition":{"id":"31"}}' \

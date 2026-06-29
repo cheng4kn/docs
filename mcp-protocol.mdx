@@ -161,6 +161,192 @@ To configure it in Cursor:
 
 Obtain your OAuth token by authorising the MCP integration through your Atlassian account at `https://id.atlassian.com`. The token grants the agent read and write access to JIRA and Confluence resources within your organisation's permission boundaries.
 
+## task-master-ai MCP Server
+
+task-master-ai is a task orchestration engine that breaks down a high-level JIRA ticket or feature description into a structured, numbered task list — and then works through that list autonomously, creating branches, writing code, and opening MRs for each sub-task. It exposes an MCP server so that any compatible IDE or agent can query and update the task list in real time as work progresses.
+
+**Package:** `task-master-ai` (available via npm)  
+**Transport:** stdio  
+**Primary use case:** Autonomous multi-step task decomposition and sequential code generation
+
+### Installing task-master-ai
+
+```bash
+npm install -g task-master-ai
+```
+
+### Configuring task-master-ai in VS Code
+
+Add the following entry to your `.vscode/mcp.json` or user-level `settings.json`:
+
+```json
+{
+  "servers": {
+    "task-master-ai": {
+      "type": "stdio",
+      "command": "task-master-ai",
+      "args": ["--mcp"],
+      "env": {
+        "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}",
+        "JIRA_URL": "https://your-org.atlassian.net",
+        "JIRA_API_TOKEN": "${env:JIRA_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### Configuring task-master-ai in Cursor
+
+Add the following entry to `~/.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "task-master-ai": {
+      "command": "task-master-ai",
+      "args": ["--mcp"],
+      "env": {
+        "ANTHROPIC_API_KEY": "${env:ANTHROPIC_API_KEY}",
+        "JIRA_URL": "https://your-org.atlassian.net",
+        "JIRA_API_TOKEN": "${env:JIRA_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+Once connected, ask your IDE agent to "parse the JIRA ticket PROJ-42 into tasks using task-master-ai" and the server will generate a structured plan that you can review and approve before execution begins. See the [task-master-ai tool page](/tools/task-master-ai) for a full list of available MCP tools and workflow examples.
+
+## Forge Orchestrator CLI
+
+Forge Orchestrator is a command-line tool that wires together your JIRA project, Confluence workspace, Git repository, and CI/CD pipeline into a single automated workflow. You define the workflow once in a `forge.yml` configuration file and use two commands to operate it:
+
+- **`forge run`** — Picks up the next ready JIRA ticket, retrieves Confluence context, invokes an AI coding agent, and opens a Merge Request — all in a single unattended pass.
+- **`forge ship`** — Promotes a reviewed MR to the main branch, triggers the CI/CD deployment pipeline, and transitions the originating JIRA ticket to **Done**.
+
+### Installing Forge Orchestrator
+
+```bash
+npm install -g @kn-group/forge-orchestrator
+```
+
+### Initialising a project
+
+Run `forge init` in your repository root to generate a starter `forge.yml`:
+
+```bash
+forge init
+```
+
+This creates a `forge.yml` file pre-populated with sensible defaults. Edit it to point at your JIRA project, Confluence space, and Git remote:
+
+```yaml
+jira:
+  url: https://your-org.atlassian.net
+  project: PROJ
+  ready_status: "Ready for Development"
+
+confluence:
+  url: https://your-org.atlassian.net/wiki
+  space: ENG
+
+git:
+  remote: origin
+  base_branch: main
+
+agent:
+  provider: anthropic
+  model: claude-opus-4-5
+```
+
+### Running the automated workflow
+
+```bash
+# Pick up the next JIRA ticket and generate a Merge Request
+forge run
+
+# Review the MR, then ship it to production
+forge ship --mr 142
+```
+
+<Tip>
+  Run `forge run --dry-run` to preview which ticket will be picked up and what implementation plan the agent produces, without writing any code or opening a branch. This is a safe way to validate your `forge.yml` configuration before committing to a full run.
+</Tip>
+
+See the [Forge Orchestrator tool page](/tools/forge-orchestrator) for advanced configuration options, including parallel task execution and custom agent prompts.
+
+## Markplane MCP Server and CLI
+
+Markplane is a dual-purpose tool: it provides an MCP server that exposes your Confluence space as a structured, searchable knowledge base to any connected IDE or agent, and a CLI that keeps your local markdown documentation in sync with Confluence pages.
+
+**MCP endpoint transport:** stdio (local) or HTTP/SSE (remote)  
+**CLI entry point:** `markplane`
+
+### Installing Markplane
+
+```bash
+npm install -g markplane
+```
+
+### Initialising Markplane in a project
+
+Run `markplane init` in your repository root to create the Markplane configuration file:
+
+```bash
+markplane init
+```
+
+The interactive prompt asks for your Confluence URL, space key, and API token, then writes a `markplane.config.json` to the project root:
+
+```json
+{
+  "confluence": {
+    "url": "https://your-org.atlassian.net/wiki",
+    "spaceKey": "ENG",
+    "apiToken": "${env:CONFLUENCE_API_TOKEN}",
+    "username": "your-email@example.com"
+  },
+  "sync": {
+    "direction": "pull",
+    "outputDir": "./docs/confluence"
+  }
+}
+```
+
+### Configuring the Markplane MCP server
+
+Add Markplane as an MCP server in your IDE to give AI agents direct, structured access to your Confluence content:
+
+```json
+{
+  "servers": {
+    "markplane": {
+      "type": "stdio",
+      "command": "markplane",
+      "args": ["mcp"],
+      "env": {
+        "CONFLUENCE_URL": "https://your-org.atlassian.net/wiki",
+        "CONFLUENCE_SPACE": "ENG",
+        "CONFLUENCE_API_TOKEN": "${env:CONFLUENCE_API_TOKEN}"
+      }
+    }
+  }
+}
+```
+
+### Syncing Confluence pages locally
+
+```bash
+# Pull all pages from your configured Confluence space into ./docs/confluence
+markplane pull
+
+# Push local markdown changes back to Confluence
+markplane push
+```
+
+Once the Markplane MCP server is connected, agents can search your Confluence space by keyword, retrieve page content by title or page ID, and resolve cross-page links — all without leaving the IDE. See the [Markplane tool page](/tools/markplane) for the full list of MCP tools and sync options.
+
 ## Security Considerations
 
 MCP gives AI agents live, read-write access to your project management system, documentation store, and source code repositories. Treat MCP access tokens with the same care as production database credentials.
